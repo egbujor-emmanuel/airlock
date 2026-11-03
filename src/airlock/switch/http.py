@@ -106,12 +106,13 @@ class AgentHttp:
     async def aclose(self) -> None:
         await self._http.aclose()
 
-    async def op(self, name: str, connection_id: str | None = None, **args: Any) -> Any:
+    async def op(self, operation: str, /, *, connection_id: str | None = None, **args: Any) -> Any:
+        # Positional-only: operations take arguments such as `name` themselves.
         headers = {CONNECTION_HEADER: connection_id} if connection_id else {}
         resp = await self._http.post(
-            f"/agents/{self.creds.agent_id}/ops/{name}", json=args, headers=headers
+            f"/agents/{self.creds.agent_id}/ops/{operation}", json=args, headers=headers
         )
-        _raise_for(resp, name)
+        _raise_for(resp, operation)
         return resp.json().get("result")
 
     async def list_ops(self) -> dict[str, Any]:
