@@ -1,0 +1,15 @@
+{
+  "name": "acme-checkout",
+  "version": "1.8.3",
+  "private": true,
+  "description": "Acme's checkout service (the customer's side of the Airlock demo)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@payco/webhooks": "file:../payco-sdk",
+    "express": "^4.21.2"
+  }
+}

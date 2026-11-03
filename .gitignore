@@ -9,3 +9,8 @@ htmlcov/
 .airlock/
 *.key
 .env
+node_modules/
+# Generated per machine by scripts/make_fixtures.py: secrets, PII and canaries.
+demo/acme-app/.env
+demo/acme-app/logs/
+demo/payco-sdk/INTERNAL_NOTES.md

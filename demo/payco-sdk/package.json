@@ -1,0 +1,10 @@
+{
+  "name": "@payco/webhooks",
+  "version": "4.2.0",
+  "description": "Sign and verify PayCo webhook signatures",
+  "main": "src/index.js",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test"
+  }
+}
