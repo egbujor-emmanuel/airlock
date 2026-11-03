@@ -28,6 +28,8 @@ AGENTS = [
         "description": "Acme's engineering agent: works on Acme's checkout service, inside Acme only.",
         "provider": "claude",
         "model": None,
+        # Claude Code's own automatic review decides what needs asking.
+        "auto_mode": True,
         "directory": ROOT / "demo" / "acme-app",
     },
     {
@@ -37,6 +39,8 @@ AGENTS = [
         "description": "PayCo's SDK agent: works on the webhooks SDK, inside PayCo only.",
         "provider": "opencode",
         "model": "opencode/deepseek-v4.1-flash-free",
+        # OpenCode's auto mode approves everything unreviewed, so this one asks in the room.
+        "auto_mode": False,
         "directory": ROOT / "demo" / "payco-sdk",
     },
 ]
@@ -68,7 +72,7 @@ def ensure_agent(client, spec: dict, controller_id: str) -> str:
             "provider": spec["provider"],
             "model": spec["model"],
             "instructions": (ROOT / "agents" / f"{spec['name']}.md").read_text(encoding="utf-8"),
-            "auto_mode": True,
+            "auto_mode": spec["auto_mode"],
             "auto_approve": False,
             "directory": str(spec["directory"]),
             "isolation": "shared",
