@@ -1,0 +1,7 @@
+# PayCo (the vendor). What may leave PayCo's private room, and who says so.
+org: payco
+display_name: PayCo
+other_org: acme
+approvers: [DeFi_Maroh]
+inside_agent: opencode-payco
+max_code_lines: 25

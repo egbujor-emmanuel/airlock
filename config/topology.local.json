@@ -1,0 +1,8 @@
+{
+  "base_url": "http://127.0.0.1:61913",
+  "shared_room": "306832df-bf03-4d79-a165-6a2ffa53455d",
+  "orgs": {
+    "acme":  {"envoy": "envoy-acme",  "inside_room": "dc618abe-bcf1-4fdf-90b3-741e3c7c91cb"},
+    "payco": {"envoy": "envoy-payco", "inside_room": "4445af23-e2fa-4c59-8509-fbc7aaae89ca"}
+  }
+}

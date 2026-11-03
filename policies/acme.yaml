@@ -1,0 +1,10 @@
+# Acme (the customer). What may leave Acme's private room, and who says so.
+org: acme
+display_name: Acme
+other_org: payco
+# Telegram usernames allowed to approve a crossing out of Acme Inside.
+approvers: [DeFi_Maroh]
+# The coding agent that works inside Acme's room (it never joins the shared room).
+inside_agent: claude-acme
+# A code excerpt longer than this needs to be summarised, not pasted.
+max_code_lines: 25
