@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+# Secrets and per-machine agent credentials never leave this machine.
+.secrets/
+.airlock/
+*.key
+.env
