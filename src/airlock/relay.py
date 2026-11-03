@@ -145,7 +145,9 @@ class Relay:
             ), msg.thread_id)]
         self._counter += 1
         crossing = f"{self.policy.org[0].upper()}-{self._counter}"
-        redacted = redact(msg.body, self.policy.canaries)
+        # "@envoy-acme here's the answer": the address is for us, not for the other org.
+        content = re.sub(rf"^\s*@{re.escape(self.own_name)}\b[\s,:]*", "", msg.body, flags=re.IGNORECASE)
+        redacted = redact(content, self.policy.canaries)
         self.ledger.append({
             "type": "proposed",
             "crossing": crossing,

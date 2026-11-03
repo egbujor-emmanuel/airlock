@@ -83,6 +83,16 @@ def test_approver_releases_redacted_text_with_signed_footer(tmp_path, keys):
     assert verify_chain(acme.ledger.entries(), {"acme": keys["acme"].public_key}).ok
 
 
+def test_the_address_to_our_envoy_is_not_part_of_the_crossing(tmp_path, keys):
+    acme = relay_for("acme", tmp_path, keys)
+    acme.on_inside(Message("agent-acme", "@envoy-acme: it arrives as application/json", addressed=True))
+
+    shared, _ = acme.on_inside(Message("acme_lead", "approve A-1"))
+
+    assert "envoy-acme" not in shared.body.split("\n")[1]
+    assert shared.body.split("\n")[1] == "it arrives as application/json"
+
+
 def test_decline_sends_nothing(tmp_path, keys):
     acme = relay_for("acme", tmp_path, keys)
     acme.on_inside(Message("agent-acme", "x", addressed=True))
