@@ -93,6 +93,21 @@ def test_decline_sends_nothing(tmp_path, keys):
     assert acme.pending == {}
 
 
+def test_restart_resumes_numbering_and_open_crossings(tmp_path, keys):
+    acme = relay_for("acme", tmp_path, keys)
+    acme.on_inside(Message("agent-acme", "first", addressed=True))
+    acme.on_inside(Message("acme_lead", "approve A-1"))
+    acme.on_inside(Message("agent-acme", f"second, key {AWS}", addressed=True))
+
+    restarted = relay_for("acme", tmp_path, keys)
+
+    assert list(restarted.pending) == ["A-2"]
+    shared, _ = restarted.on_inside(Message("acme_lead", "approve A-2"))
+    assert "[REDACTED:aws_access_key#1]" in shared.body and AWS not in shared.body
+    (post,) = restarted.on_inside(Message("agent-acme", "third", addressed=True))
+    assert "Crossing A-3" in post.body
+
+
 def test_unknown_crossing(tmp_path, keys):
     (post,) = relay_for("acme", tmp_path, keys).on_inside(Message("acme_lead", "approve A-9"))
     assert "no crossing A-9" in post.body

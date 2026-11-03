@@ -63,6 +63,27 @@ class Relay:
     pending: dict[str, Pending] = field(default_factory=dict)
     _counter: int = 0
 
+    def __post_init__(self) -> None:
+        self._restore()
+
+    def _restore(self) -> None:
+        """Rebuild the counter and open crossings from the ledger after a restart.
+
+        The ledger is the only state: a crossing proposed but not yet approved,
+        declined or refused is still waiting, with the redacted text it holds.
+        """
+        closed = {"approved", "declined"}
+        for entry in self.ledger.entries():
+            crossing = entry.get("crossing")
+            if entry["type"] == "proposed":
+                self._counter = max(self._counter, int(str(crossing).split("-")[1]))
+                if "redacted_text" not in entry:  # written before crossings were resumable
+                    continue
+                redacted = RedactedText(entry["redacted_text"], ())
+                self.pending[crossing] = Pending(crossing, redacted, entry["requested_by"], entry.get("thread_id"))
+            elif entry["type"] in closed:
+                self.pending.pop(crossing, None)
+
     # ---------------------------------------------------------------- shared
     def on_shared(self, msg: Message) -> list[Post]:
         if msg.sender_name == self.own_name:
@@ -131,6 +152,9 @@ class Relay:
             "requested_by": msg.sender_name,
             "digest": digest(msg.body),
             "redacted_digest": digest(redacted.text),
+            # Safe to keep: this is exactly what an approver would release.
+            "redacted_text": redacted.text,
+            "thread_id": msg.thread_id,
             "redactions": [r.__dict__ for r in redacted.redactions],
         })
         self.pending[crossing] = Pending(crossing, redacted, msg.sender_name, msg.thread_id)
