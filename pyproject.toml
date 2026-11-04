@@ -33,3 +33,4 @@ testpaths = ["tests"]
 [project.scripts]
 airlock-envoy = "airlock.envoy:main"
 airlock-bench = "airlock.bench:main"
+airlock-verify = "airlock.verify:main"

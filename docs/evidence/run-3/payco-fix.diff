@@ -1,0 +1,14 @@
+diff --git a/demo/payco-sdk/sender/hrclock.js b/demo/payco-sdk/sender/hrclock.js
+index 68b1a75..daa2494 100644
+--- a/demo/payco-sdk/sender/hrclock.js
++++ b/demo/payco-sdk/sender/hrclock.js
+@@ -8,7 +8,8 @@ const { performance } = require("node:perf_hooks");
+  * @returns {number} seconds since the Unix epoch
+  */
+ function nowSeconds() {
+-  return Math.round(performance.timeOrigin + performance.now());
++  // performance.timeOrigin + performance.now() is milliseconds; `t=` is whole seconds.
++  return Math.floor((performance.timeOrigin + performance.now()) / 1000);
+ }
+ 
+ module.exports = { nowSeconds };
