@@ -1,12 +1,13 @@
-# Bring the whole local Airlock stack up after a reboot, in order:
-#   1. the Switch server (and its database), detached from Switch Console
+# Bring the local Airlock stack up after a reboot:
+#   1. checks the Switch server is up. Switch Console owns it: open Console, Server > Start.
 #   2. both envoys
 #   3. Acme's checkout app on :4242 (the endpoint PayCo delivers webhooks to)
-# Switch Console must be open for the managed agents (claude-acme, opencode-payco).
+# Don't run start-switch-server.ps1 while Console is open: Console retries its own start,
+# finds the port taken, and its failed-start cleanup stops the database under you.
 #   powershell -ExecutionPolicy Bypass -File scripts\up.ps1
 $root = Split-Path $PSScriptRoot -Parent
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "start-switch-server.ps1")
-if ($LASTEXITCODE -ne 0) { Write-Host "Switch server didn't start"; exit 1 }
+try { Invoke-WebRequest -UseBasicParsing http://127.0.0.1:61913/health -TimeoutSec 3 | Out-Null }
+catch { Write-Host "Switch server isn't up. Open Switch Console, go to its Server page and press Start."; exit 1 }
 
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "envoys.ps1") restart
 
