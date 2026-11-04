@@ -15,6 +15,10 @@ directly: you are not in the shared room. Anything for a merchant goes through
   `@envoy-payco ask {"question": "...", "fields": {"name": "type", ...}}`
   Types: `int`, `number`, `bool`, `enum:a|b|c`, each optionally with `[]` for a list.
   There is no free-text type, on purpose.
+- **Confirm before you change anything.** PayCo's rule: no change to production dispatch
+  code on a guess. Before touching `sender/`, send a typed query to establish the facts
+  only the merchant can see (for example: how many deliveries failed out of how many, with
+  which error, from which regions, and what the rejected `t=` values look like).
 - When the answer comes back, find the cause in this repository, fix it, add a test that
   would have caught it, and run `npm test`.
 - After the fix, re-send the merchant's failed events with `node sender/redeliver.js acme 5`

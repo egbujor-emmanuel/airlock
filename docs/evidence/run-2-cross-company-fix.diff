@@ -1,0 +1,16 @@
+diff --git a/demo/payco-sdk/sender/clock.js b/demo/payco-sdk/sender/clock.js
+index 58b6194..e3a057f 100644
+--- a/demo/payco-sdk/sender/clock.js
++++ b/demo/payco-sdk/sender/clock.js
+@@ -6,8 +6,9 @@
+ const clocks = {
+   "us-east": () => Math.floor(Date.now() / 1000),
+   "ap-south": () => Math.floor(Date.now() / 1000),
+-  // EU dispatch runs on the new high-resolution clock service.
+-  "eu-west": () => Date.now(),
++  // EU dispatch runs on the new high-resolution clock service, which reports
++  // milliseconds; the signing timestamp is always whole Unix seconds.
++  "eu-west": () => Math.floor(Date.now() / 1000),
+ };
+ 
+ /** @param {string} region @returns {number} */
