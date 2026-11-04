@@ -16,7 +16,7 @@ Built on [Switch](https://github.com/sandbox-quantum/switch) for the Flip the Sw
 ```bash
 git clone <this repo> airlock && cd airlock
 uv sync                                    # Python 3.11+, https://docs.astral.sh/uv/
-uv run pytest -q                           # 124 tests: protocol client, scanner, relay, ledger, queries
+uv run pytest -q                           # 135 tests, 85% coverage: protocol client, scanner, relay, ledger, queries
 uv run airlock-bench                       # the leak benchmark: 70 attacks, 32 honest answers
 uv run airlock-verify docs/evidence/run-3  # verify a real run's signed ledgers yourself
 ```
