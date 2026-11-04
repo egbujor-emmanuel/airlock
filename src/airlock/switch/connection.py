@@ -19,7 +19,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import AsyncIterator
+import uuid
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlencode
@@ -38,10 +39,21 @@ FINAL_EVICTIONS = frozenset({"taken_over", "closed"})
 # themselves by retrying; 4409 is a takeover or a claim conflict.
 FINAL_CLOSE_CODES = frozenset({4400, 4401, 4403, 4409})
 RECONNECT_BACKOFF_S = (0.5, 1, 2, 5, 10)
+MAX_ROTATIONS = 5
 
 
 class ConnectionStopped(RuntimeError):
     """The server told us not to reconnect."""
+
+
+class ReattachRefused(ConnectionStopped):
+    """A reconnect was refused as taken over.
+
+    Seen after a laptop sleeps: a reconnect lands server-side, its reply is lost,
+    and the retry carries a generation the server has already moved past. When
+    this process is the only one that can hold the connection (the envoy takes
+    a lock), the honest recovery is a fresh connection id, not giving up.
+    """
 
 
 @dataclass(frozen=True)
@@ -92,7 +104,11 @@ def apply_control(state: ConnectionState, kind: str, data: dict[str, Any]) -> No
         state.cursor = int(data["resumed_at"])
         state.pending_gap = data
     elif kind == "refused":
-        raise ConnectionStopped(f"refused {data.get('status')}: {data.get('detail')}")
+        detail = data.get("detail")
+        message = f"refused {data.get('status')}: {detail}"
+        if isinstance(detail, dict) and detail.get("code") == "taken_over":
+            raise ReattachRefused(message)
+        raise ConnectionStopped(message)
     elif kind == "evicted":
         code = data.get("code")
         if code in FINAL_EVICTIONS:
@@ -119,13 +135,30 @@ class RoomConnection:
     event that was received but not yet handled is replayed after a reconnect.
     """
 
-    def __init__(self, creds: AgentCreds, room_id: str, connection_id: str) -> None:
+    def __init__(
+        self,
+        creds: AgentCreds,
+        room_id: str,
+        connection_id: str,
+        on_rotate: Callable[[str], None] | None = None,
+    ) -> None:
+        """``on_rotate`` opts in to recovering from a refused reattach with a fresh
+        connection id; pass it only when this process holds the agent exclusively."""
         self.creds = creds
         self.room_id = room_id
         self.state = ConnectionState(connection_id=connection_id)
+        self._on_rotate = on_rotate
+        self._rotations = 0
         self._queue: asyncio.Queue[RoomEvent] = asyncio.Queue()
         self._stopped: BaseException | None = None
         self._ready = asyncio.Event()
+
+    def _rotate(self) -> None:
+        # Keep the cursor: sequence numbers belong to the agent, not the connection.
+        self.state = ConnectionState(connection_id=str(uuid.uuid4()), cursor=self.state.cursor)
+        self._rotations += 1
+        if self._on_rotate:
+            self._on_rotate(self.state.connection_id)
 
     @property
     def connection_id(self) -> str:
@@ -140,6 +173,13 @@ class RoomConnection:
             try:
                 await self._session()
                 attempt = 0
+            except ReattachRefused as exc:
+                if self._on_rotate is None or self._rotations >= MAX_ROTATIONS:
+                    self._stopped = exc
+                    log.error("room %s connection stopped: %s", self.room_id, exc)
+                    raise
+                log.warning("room %s reattach refused as taken over; opening a fresh connection", self.room_id)
+                self._rotate()
             except ConnectionStopped as exc:
                 self._stopped = exc
                 log.error("room %s connection stopped: %s", self.room_id, exc)

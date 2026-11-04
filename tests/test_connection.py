@@ -75,6 +75,53 @@ def test_resumable_evictions_do_not_stop(code):
     apply_control(ConnectionState("c", cursor=3), "evicted", {"code": code})
 
 
+def test_a_refused_reattach_is_distinguished_from_other_refusals():
+    from airlock.switch.connection import ReattachRefused
+
+    with pytest.raises(ReattachRefused):
+        apply_control(ConnectionState("c"), "refused", {"status": 409, "detail": {"code": "taken_over"}})
+
+
+async def test_refused_reattach_rotates_to_a_fresh_connection_keeping_the_cursor():
+    seen_ids: list[str] = []
+    rotated: list[str] = []
+
+    async def server(ws):
+        conn_id = parse_qs(urlparse(ws.request.path).query)["connection_id"][0]
+        seen_ids.append(conn_id)
+        if len(seen_ids) == 1:
+            await ws.send(json.dumps({"event": "refused", "data": {"status": 409, "detail": {"code": "taken_over"}}}))
+            await ws.close(code=4409)
+            return
+        await ws.send(json.dumps({"event": "connection_state", "data": {"generation": 2, "rooms": ["r"]}}))
+        await asyncio.sleep(5)
+
+    async with websockets.serve(server, "127.0.0.1", 0) as srv:
+        port = srv.sockets[0].getsockname()[1]
+        conn = RoomConnection(AgentCreds(f"http://127.0.0.1:{port}", "a", "envoy", "k"), "r", "old-id",
+                              on_rotate=rotated.append)
+        conn.state.cursor = 42
+        runner = asyncio.create_task(conn.run())
+        await conn.wait_ready()
+
+        assert seen_ids[0] == "old-id" and seen_ids[1] != "old-id"
+        assert rotated == [seen_ids[1]]
+        assert conn.state.cursor == 42
+        runner.cancel()
+
+
+async def test_without_exclusive_ownership_a_refused_reattach_still_stops():
+    async def server(ws):
+        await ws.send(json.dumps({"event": "refused", "data": {"status": 409, "detail": {"code": "taken_over"}}}))
+        await ws.close(code=4409)
+
+    async with websockets.serve(server, "127.0.0.1", 0) as srv:
+        port = srv.sockets[0].getsockname()[1]
+        conn = RoomConnection(AgentCreds(f"http://127.0.0.1:{port}", "a", "envoy", "k"), "r", "id")
+        with pytest.raises(ConnectionStopped):
+            await asyncio.wait_for(conn.run(), 5)
+
+
 def test_refused_stops():
     with pytest.raises(ConnectionStopped):
         apply_control(ConnectionState("c"), "refused", {"status": 409, "detail": "claimed"})

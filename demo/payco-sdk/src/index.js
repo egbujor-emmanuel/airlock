@@ -16,6 +16,7 @@ function hmac(secret, timestamp, payload) {
   return crypto.createHmac("sha256", secret).update(`${timestamp}.${payload}`).digest("hex");
 }
 
+/** @returns {string} the PayCo-Signature header for a payload. */
 function sign(payload, secret, timestamp = Math.floor(Date.now() / 1000)) {
   return `t=${timestamp},v1=${hmac(secret, timestamp, payload)}`;
 }
@@ -30,9 +31,15 @@ function parseHeader(header) {
   return { timestamp: Number(parts.t), signature: parts.v1 };
 }
 
+/**
+ * Verify a webhook. `payload` must be the raw request body (string or Buffer).
+ * @returns {object} the parsed event
+ */
 function verify(payload, header, secret, { toleranceSec = DEFAULT_TOLERANCE_SEC, now } = {}) {
-  // Be forgiving about what callers hand us.
-  const body = typeof payload === "string" || Buffer.isBuffer(payload) ? payload.toString() : JSON.stringify(payload);
+  if (typeof payload !== "string" && !Buffer.isBuffer(payload)) {
+    throw new SignatureVerificationError("verify() needs the raw request body (string or Buffer)");
+  }
+  const body = payload.toString();
   const { timestamp, signature } = parseHeader(header);
   if (!timestamp || !signature) {
     throw new SignatureVerificationError("Unable to extract timestamp and signatures from header");

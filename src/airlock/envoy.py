@@ -14,8 +14,10 @@ import argparse
 import asyncio
 import json
 import logging
+import sys
 import uuid
 from pathlib import Path
+from typing import IO
 
 from airlock.ledger.chain import Ledger
 from airlock.ledger.signing import load_or_create
@@ -30,15 +32,47 @@ ROOT = Path.cwd()
 STATE = ROOT / ".airlock"
 
 
+def _connection_path(org: str, room: str) -> Path:
+    return STATE / "connections" / f"{org}-{room}.id"
+
+
 def connection_id(org: str, room: str) -> str:
     """Stable per (org, room): reconnecting must reuse the id, not mint one."""
-    path = STATE / "connections" / f"{org}-{room}.id"
+    path = _connection_path(org, room)
     if path.exists():
         return path.read_text(encoding="utf-8").strip()
+    return save_connection_id(org, room, str(uuid.uuid4()))
+
+
+def save_connection_id(org: str, room: str, value: str) -> str:
+    path = _connection_path(org, room)
     path.parent.mkdir(parents=True, exist_ok=True)
-    value = str(uuid.uuid4())
     path.write_text(value, encoding="utf-8")
     return value
+
+
+def hold_single_instance_lock(org: str) -> IO[bytes]:
+    """One envoy per org, ever. A second copy would fight over the connections.
+
+    The OS releases the lock when the process dies, so a crash never leaves it stuck.
+    Holding it is also what makes rotating a refused connection safe.
+    """
+    path = STATE / "locks" / f"envoy-{org}.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = open(path, "a+b")  # noqa: SIM115 - held for the life of the process
+    try:
+        if sys.platform == "win32":
+            import msvcrt
+
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        raise SystemExit(f"envoy-{org} is already running (lock held: {path})") from None
+    return handle
 
 
 def to_message(event: RoomEvent) -> Message:
@@ -65,8 +99,13 @@ class Envoy:
         other = topology["orgs"][policy.other_org]["envoy"]
         ledger = Ledger(STATE / "ledger" / f"{org}.jsonl", load_or_create(STATE / "keys" / f"{org}.json", org))
         self.relay = Relay(policy, o["envoy"], other, ledger)
+        self._lock = hold_single_instance_lock(org)
         self.conns = {
-            name: RoomConnection(self.creds, room, connection_id(org, name)) for name, room in self.rooms.items()
+            name: RoomConnection(
+                self.creds, room, connection_id(org, name),
+                on_rotate=lambda new_id, name=name: save_connection_id(org, name, new_id),
+            )
+            for name, room in self.rooms.items()
         }
         self.queue: asyncio.Queue[tuple[str, RoomEvent]] = asyncio.Queue()
 

@@ -1,26 +1,32 @@
 const test = require("node:test");
 const assert = require("node:assert");
 const { sign, verify, SignatureVerificationError } = require("../src");
+const { buildDelivery } = require("../sender/dispatch");
 
 const SECRET = "test-secret";
 const RAW = '{"id": "evt_1", "type": "payment.succeeded", "amount": 4200}';
 
 test("verifies a raw string body", () => {
-  const header = sign(RAW, SECRET);
-  assert.deepStrictEqual(verify(RAW, header, SECRET).id, "evt_1");
+  assert.strictEqual(verify(RAW, sign(RAW, SECRET), SECRET).id, "evt_1");
 });
 
 test("verifies a raw Buffer body", () => {
-  const header = sign(RAW, SECRET);
-  assert.strictEqual(verify(Buffer.from(RAW), header, SECRET).amount, 4200);
+  assert.strictEqual(verify(Buffer.from(RAW), sign(RAW, SECRET), SECRET).amount, 4200);
+});
+
+test("rejects a parsed object", () => {
+  assert.throws(() => verify(JSON.parse(RAW), sign(RAW, SECRET), SECRET), /raw request body/);
 });
 
 test("rejects a tampered body", () => {
-  const header = sign(RAW, SECRET);
-  assert.throws(() => verify(RAW.replace("4200", "9999"), header, SECRET), SignatureVerificationError);
+  assert.throws(() => verify(RAW.replace("4200", "9999"), sign(RAW, SECRET), SECRET), SignatureVerificationError);
 });
 
 test("rejects a stale timestamp", () => {
-  const header = sign(RAW, SECRET, 1000);
-  assert.throws(() => verify(RAW, header, SECRET, { now: 5000 }), /tolerance/);
+  assert.throws(() => verify(RAW, sign(RAW, SECRET, 1000), SECRET, { now: 5000 }), /tolerance/);
+});
+
+test("a dispatched webhook verifies on the merchant side", () => {
+  const { body, headers } = buildDelivery({ id: "evt_9", amount: 100 }, { secret: SECRET, region: "us-east" });
+  assert.strictEqual(verify(body, headers["payco-signature"], SECRET).id, "evt_9");
 });
