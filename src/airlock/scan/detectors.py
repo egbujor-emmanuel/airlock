@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import base64
 import binascii
+import codecs
 import math
 import re
 import unicodedata
+import urllib.parse
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from enum import Enum
@@ -161,6 +163,41 @@ def _decoded_candidates(text: str) -> Iterator[tuple[int, int, str, str]]:
             continue
 
 
+URL_ENCODED_RUN = re.compile(r"(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9._~+-]){6,}")
+SPACED_RUN = re.compile(r"(?<!\S)(?:\S ){7,}\S(?!\S)")
+
+
+def _named_findings(text: str, canaries: tuple[str, ...], via: str) -> list[Finding]:
+    """Named patterns and canaries only: used on whole-text views (rot13,
+    reversed), where an entropy check would just repeat the plain scan."""
+    named = [f for f in _pattern_findings(text, via) if f.kind not in ("phone", "card_number")]
+    return named + list(_canary_findings(text, canaries, via))
+
+
+def _view_findings(text: str, canaries: tuple[str, ...]) -> list[Finding]:
+    """Text read back to front or rot13'd: same length, so positions map back."""
+    findings = []
+    rot = codecs.encode(text, "rot13")
+    findings += [Finding(f.kind, f.category, f.start, f.end, text[f.start:f.end], "rot13")
+                 for f in _named_findings(rot, canaries, "rot13")]
+    n = len(text)
+    findings += [Finding(f.kind, f.category, n - f.end, n - f.start, text[n - f.end:n - f.start], "reversed")
+                 for f in _named_findings(text[::-1], canaries, "reversed")]
+    return findings
+
+
+def _run_findings(text: str, canaries: tuple[str, ...], depth: int) -> list[Finding]:
+    """Runs that decode to something else: URL-encoded, or one character per space."""
+    findings = []
+    candidates = [(m, urllib.parse.unquote(m.group()), "url") for m in URL_ENCODED_RUN.finditer(text)
+                  if "%" in m.group()]
+    candidates += [(m, m.group().replace(" ", ""), "spaced") for m in SPACED_RUN.finditer(text)]
+    for m, decoded, how in candidates:
+        for f in _scan_layer(normalise(decoded), canaries, how, depth + 1):
+            findings.append(Finding(f.kind, f.category, m.start(), m.end(), m.group(), how))
+    return findings
+
+
 def _scan_layer(text: str, canaries: tuple[str, ...], via: str, depth: int) -> list[Finding]:
     findings = [
         *_pattern_findings(text, via),
@@ -169,6 +206,9 @@ def _scan_layer(text: str, canaries: tuple[str, ...], via: str, depth: int) -> l
     ]
     if depth >= MAX_DECODE_DEPTH:
         return findings
+    if depth == 0:
+        findings += _view_findings(text, canaries)
+    findings += _run_findings(text, canaries, depth)
     for start, end, decoded, how in _decoded_candidates(text):
         if not decoded.isprintable() and not decoded.strip():
             continue

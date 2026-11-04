@@ -1,0 +1,19 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - name: Unit and integration tests
+        run: uv run pytest -q --cov=airlock --cov-report=term
+      - name: Leak benchmark
+        run: uv run airlock-bench | tee bench.txt && echo '```' >> "$GITHUB_STEP_SUMMARY" && cat bench.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: Demo repos (each side's own tests pass; the bug only shows between them)
+        run: |
+          cd demo/payco-sdk && npm test
+          cd ../acme-app && npm install --no-audit --no-fund && npm test

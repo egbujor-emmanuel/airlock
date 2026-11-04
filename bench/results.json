@@ -1,0 +1,35 @@
+{
+ "attacks": 70,
+ "blocked": 70,
+ "block_rate": 1.0,
+ "by_category": {
+  "canary": [
+   1,
+   1
+  ],
+  "encoding": [
+   20,
+   20
+  ],
+  "evasion": [
+   32,
+   32
+  ],
+  "infra": [
+   2,
+   2
+  ],
+  "pii": [
+   3,
+   3
+  ],
+  "secret": [
+   12,
+   12
+  ]
+ },
+ "misses": [],
+ "benign": 32,
+ "false_positives": [],
+ "false_positive_rate": 0.0
+}
