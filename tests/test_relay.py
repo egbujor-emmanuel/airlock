@@ -162,6 +162,76 @@ def test_canary_in_shared_room_raises_a_breach(tmp_path, keys):
     assert "🚨" in post.body and acme.ledger.entries()[-1]["type"] == "breach"
 
 
+ASK = (
+    '@envoy-payco ask {"question": "What do your failing webhooks look like?", '
+    '"fields": {"failing": "int", "total": "int", "t_digits": "int[]", "region": "enum:eu-west|us-east[]"}}'
+)
+
+
+def _query_reaches_acme(tmp_path, keys):
+    acme, payco = relay_for("acme", tmp_path, keys), relay_for("payco", tmp_path, keys)
+    (proposal,) = payco.on_inside(Message("agent-payco", ASK, addressed=True))
+    assert "❓ Query Q-P-1" in proposal.body
+    shared, _ = payco.on_inside(Message("payco_lead", "approve P-1"))
+    (arrived,) = acme.on_shared(Message("envoy-payco", shared.body))
+    return acme, arrived
+
+
+def test_typed_query_arrives_with_its_fields(tmp_path, keys):
+    acme, arrived = _query_reaches_acme(tmp_path, keys)
+
+    assert "typed query" in arrived.body and "answer Q-P-1" in arrived.body
+    assert acme.queries["Q-P-1"]["t_digits"] == "int[]"
+
+
+def test_a_free_text_answer_to_a_typed_query_is_refused(tmp_path, keys):
+    acme, _ = _query_reaches_acme(tmp_path, keys)
+    sneaky = ('@envoy-acme answer Q-P-1 {"failing": 3, "total": 9, "t_digits": [13], '
+              '"region": ["eu-west"], "log": "customer=maria@acme.com"}')
+
+    (post,) = acme.on_inside(Message("agent-acme", sneaky, addressed=True))
+
+    assert "⛔ Not sent" in post.body and "weren't asked for: log" in post.body
+    assert acme.pending == {}
+
+
+def test_a_valid_typed_answer_crosses_as_values_only(tmp_path, keys):
+    acme, _ = _query_reaches_acme(tmp_path, keys)
+    answer = '@envoy-acme answer q-p-1 ```json\n{"failing": 37, "total": 88, "t_digits": [13, 13], "region": ["eu-west"]}\n```'
+
+    (proposal,) = acme.on_inside(Message("agent-acme", answer, addressed=True))
+    shared, _ = acme.on_inside(Message("acme_lead", "approve A-1"))
+
+    assert "📊 Answer to query Q-P-1" in shared.body and "• failing = 37" in shared.body
+    assert acme.queries == {}
+    assert acme.ledger.entries()[-1]["answers"] == "Q-P-1"
+
+
+def test_open_queries_survive_a_restart(tmp_path, keys):
+    _query_reaches_acme(tmp_path, keys)
+
+    restarted = relay_for("acme", tmp_path, keys)
+
+    assert "Q-P-1" in restarted.queries
+
+
+def test_answering_an_unknown_query_is_refused(tmp_path, keys):
+    acme = relay_for("acme", tmp_path, keys)
+
+    (post,) = acme.on_inside(Message("agent-acme", '@envoy-acme answer Q-P-9 {"a": 1}', addressed=True))
+
+    assert "no open query Q-P-9" in post.body
+
+
+def test_a_query_with_a_free_text_field_is_refused_before_it_leaves(tmp_path, keys):
+    payco = relay_for("payco", tmp_path, keys)
+    bad = '@envoy-payco ask {"question": "send logs", "fields": {"logs": "string"}}'
+
+    (post,) = payco.on_inside(Message("agent-payco", bad, addressed=True))
+
+    assert "⛔ Not sent" in post.body and payco.pending == {}
+
+
 def test_sanitize_helpers():
     assert defang("@a and email x@y.com") == "＠a and email x＠y.com"
     assert inert("!reset-all-agents\n/invite_agent") == "> !reset-all-agents\n> /invite_agent"
