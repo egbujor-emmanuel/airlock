@@ -1,0 +1,147 @@
+diff --git a/demo/acme-app/server.js b/demo/acme-app/server.js
+index 1ba8db4..5086a30 100644
+--- a/demo/acme-app/server.js
++++ b/demo/acme-app/server.js
+@@ -10,11 +10,19 @@ const LOG = path.join(__dirname, "logs", "webhooks.log");
+ function createApp({ secret }) {
+   if (!secret) throw new Error("PAYCO_WEBHOOK_SECRET is not set");
+   const app = express();
+-  app.use(express.json());
++  // Keep the exact raw bytes PayCo signed (req.rawBody) alongside the
++  // parsed req.body express.json() produces for convenience/logging.
++  app.use(
++    express.json({
++      verify: (req, _res, buf) => {
++        req.rawBody = buf;
++      },
++    }),
++  );
+ 
+   app.post("/webhooks/payco", (req, res) => {
+     try {
+-      const event = verify(req.body, req.headers["payco-signature"], secret);
++      const event = verify(req.rawBody, req.headers["payco-signature"], secret);
+       res.status(200).json({ received: event.id });
+     } catch (err) {
+       fs.appendFileSync(
+diff --git a/demo/payco-sdk/README.md b/demo/payco-sdk/README.md
+index 4bb1fbb..0f2719e 100644
+--- a/demo/payco-sdk/README.md
++++ b/demo/payco-sdk/README.md
+@@ -2,17 +2,46 @@
+ 
+ Verify that a webhook really came from PayCo.
+ 
++`verify` must receive the **raw request body bytes**. The signature is an HMAC over the
++exact bytes PayCo sent, so anything that has already parsed and re-serialized the body
++(whitespace, key order, number formatting) will not match.
++
++## Express
++
++If you use a global `express.json()`, capture the raw body in its `verify` callback:
++
+ ```js
++app.use(
++  express.json({
++    verify: (req, _res, buf) => {
++      req.rawBody = buf;
++    },
++  }),
++);
++
+ const { verify } = require("@payco/webhooks");
+ 
+ app.post("/webhooks/payco", (req, res) => {
++  const event = verify(req.rawBody, req.headers["payco-signature"], process.env.PAYCO_WEBHOOK_SECRET);
++  // handle event
++  res.sendStatus(200);
++});
++```
++
++Or parse only the webhook route as raw bytes:
++
++```js
++app.post("/webhooks/payco", express.raw({ type: "application/json" }), (req, res) => {
+   const event = verify(req.body, req.headers["payco-signature"], process.env.PAYCO_WEBHOOK_SECRET);
+   // handle event
+   res.sendStatus(200);
+ });
+ ```
+ 
+-`verify` throws `SignatureVerificationError` when the signature doesn't match or the
++`verify` accepts a string, `Buffer` or `Uint8Array`. Passing a parsed object throws
++`SignatureVerificationError` instead of silently re-serializing it.
++
++`verify` also throws `SignatureVerificationError` when the signature doesn't match or the
+ timestamp is more than 5 minutes old.
+ 
+ This repository is PayCo's (the vendor's) side of the Airlock demo. PayCo's agent works
+diff --git a/demo/payco-sdk/package.json b/demo/payco-sdk/package.json
+index ae0e467..c8ae2f4 100644
+--- a/demo/payco-sdk/package.json
++++ b/demo/payco-sdk/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "@payco/webhooks",
+-  "version": "4.2.0",
++  "version": "4.2.1",
+   "description": "Sign and verify PayCo webhook signatures",
+   "main": "src/index.js",
+   "license": "MIT",
+diff --git a/demo/payco-sdk/src/index.js b/demo/payco-sdk/src/index.js
+index 0859fec..0a88fd5 100644
+--- a/demo/payco-sdk/src/index.js
++++ b/demo/payco-sdk/src/index.js
+@@ -30,9 +30,20 @@ function parseHeader(header) {
+   return { timestamp: Number(parts.t), signature: parts.v1 };
+ }
+ 
++function toRawBody(payload) {
++  // Only byte-exact inputs are safe: the HMAC was computed over the bytes PayCo sent.
++  if (typeof payload === "string") return payload;
++  if (Buffer.isBuffer(payload)) return payload.toString();
++  if (payload instanceof Uint8Array) return Buffer.from(payload).toString();
++  const received = payload === null ? "null" : typeof payload;
++  throw new SignatureVerificationError(
++    `verify() requires the raw request body (string, Buffer or Uint8Array), but received a parsed ${received}. ` +
++      "Re-serializing it would not reproduce the signed bytes. Capture the raw body before parsing JSON.",
++  );
++}
++
+ function verify(payload, header, secret, { toleranceSec = DEFAULT_TOLERANCE_SEC, now } = {}) {
+-  // Be forgiving about what callers hand us.
+-  const body = typeof payload === "string" || Buffer.isBuffer(payload) ? payload.toString() : JSON.stringify(payload);
++  const body = toRawBody(payload);
+   const { timestamp, signature } = parseHeader(header);
+   if (!timestamp || !signature) {
+     throw new SignatureVerificationError("Unable to extract timestamp and signatures from header");
+diff --git a/demo/payco-sdk/test/verify.test.js b/demo/payco-sdk/test/verify.test.js
+index 44be179..c626fcc 100644
+--- a/demo/payco-sdk/test/verify.test.js
++++ b/demo/payco-sdk/test/verify.test.js
+@@ -15,6 +15,25 @@ test("verifies a raw Buffer body", () => {
+   assert.strictEqual(verify(Buffer.from(RAW), header, SECRET).amount, 4200);
+ });
+ 
++test("verifies a Uint8Array body", () => {
++  const header = sign(RAW, SECRET);
++  assert.strictEqual(verify(new Uint8Array(Buffer.from(RAW)), header, SECRET).id, "evt_1");
++});
++
++test("rejects a parsed object instead of re-serializing it", () => {
++  const header = sign(RAW, SECRET);
++  assert.throws(
++    () => verify(JSON.parse(RAW), header, SECRET),
++    (err) => err instanceof SignatureVerificationError && /raw request body/.test(err.message),
++  );
++});
++
++test("verifies the signed bytes even when the parsed object would serialize differently", () => {
++  const spaced = '{ "amount": 4200, "id": "evt_1" }';
++  const header = sign(spaced, SECRET);
++  assert.deepStrictEqual(verify(Buffer.from(spaced), header, SECRET), { amount: 4200, id: "evt_1" });
++});
++
+ test("rejects a tampered body", () => {
+   const header = sign(RAW, SECRET);
+   assert.throws(() => verify(RAW.replace("4200", "9999"), header, SECRET), SignatureVerificationError);
