@@ -33,6 +33,16 @@ Room = Literal["inside", "shared"]
 
 DECISION = re.compile(r"^\s*(approve|decline)\s+([A-Za-z]+-\d+)\b", re.IGNORECASE)
 ASK = re.compile(r"^\s*ask\b", re.IGNORECASE)
+# Notices Switch posts in an agent's name when the agent can't answer (fixed
+# templates in switch_core/delivery/recipient.py, Switch 0.31). They are not the
+# agent's words, so they are never offered as a crossing.
+SWITCH_NOTICE = re.compile(
+    r"^\s*(?:My machine, \*\*.+?\*\*, (?:is offline or reconnecting|was asleep and is starting|is stopped)"
+    r"|I'm stopped, so I'm not running"
+    r"|I don't have a session (?:in|connected to) this room"
+    r"|I have a session connected to this room, but it isn't reporting"
+    r"|I hold a role in this room, but the session that assumed it)"
+)
 ANSWER = re.compile(r"^\s*answer\s+(Q-[A-Za-z]+-\d+)\b", re.IGNORECASE)
 FOOTER = re.compile(r"airlock crossing ([A-Z]+-\d+) · entry ([0-9a-f]{16}) · signed by ([a-z0-9-]+)")
 HASH_SHOWN = 16
@@ -170,9 +180,13 @@ class Relay:
         decision = DECISION.match(msg.body)
         if decision:
             return self._decide(msg, decision.group(1).lower(), decision.group(2).upper())
-        if msg.addressed:
+        if msg.addressed and not self._is_switch_notice(msg.body):
             return self._propose(msg)
         return []
+
+    def _is_switch_notice(self, body: str) -> bool:
+        content = re.sub(rf"^\s*@{re.escape(self.own_name)}\b[\s,:]*", "", body, flags=re.IGNORECASE)
+        return bool(SWITCH_NOTICE.match(content))
 
     def _propose(self, msg: Message) -> list[Post]:
         if code_lines(msg.body) > self.policy.max_code_lines:

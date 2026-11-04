@@ -93,6 +93,19 @@ def test_the_address_to_our_envoy_is_not_part_of_the_crossing(tmp_path, keys):
     assert shared.body.split("\n")[1] == "it arrives as application/json"
 
 
+@pytest.mark.parametrize("notice", [
+    "My machine, **Yoma-Maroh**, is offline or reconnecting to Switch, so I can't answer right now.",
+    "My machine, **cloud-1**, was asleep and is starting now. I'll pick it up.",
+    "I'm stopped, so I'm not running. **My owner has to set me** to running.",
+    "I don't have a session connected to this room. Start one from Switch Console.",
+])
+def test_switch_notices_in_the_agents_name_never_become_crossings(tmp_path, keys, notice):
+    acme = relay_for("acme", tmp_path, keys)
+
+    assert acme.on_inside(Message("agent-acme", f"@envoy-acme {notice}", addressed=True)) == []
+    assert acme.pending == {}
+
+
 def test_decline_sends_nothing(tmp_path, keys):
     acme = relay_for("acme", tmp_path, keys)
     acme.on_inside(Message("agent-acme", "x", addressed=True))
