@@ -1,6 +1,7 @@
 """Create each org's coding agent in its inside room (and nowhere else).
 
-    uv run python scripts/setup_inside_agents.py
+    uv run python scripts/setup_inside_agents.py              # both agents on one server
+    uv run python scripts/setup_inside_agents.py --server-b   # Acme's agent on Acme's own server
 
 Acme gets Claude Code in demo/acme-app; PayCo gets OpenCode on a free model in
 demo/payco-sdk. Two vendors' agents, one per org. Each is a managed agent on this
@@ -18,7 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from connect_chat_apps import CORE_ENV, admin_client, read_env  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-TOPO = json.loads((ROOT / "config/topology.local.json").read_text(encoding="utf-8"))
+TOPO_FILE = "config/topology.federated.json" if "--server-b" in sys.argv else "config/topology.local.json"
+TOPO = json.loads((ROOT / TOPO_FILE).read_text(encoding="utf-8"))
 
 AGENTS = [
     {
@@ -97,10 +99,18 @@ def place_in_inside_room(client, spec: dict, agent_id: str) -> None:
 
 
 def main() -> int:
-    client = admin_client(read_env(CORE_ENV))
+    if "--server-b" in sys.argv:
+        # Two-server mode: only Acme's agent, on Acme's own server and its machine.
+        from setup_server_b import ENV_B, admin_b
+
+        client = admin_b(read_env(ENV_B))
+        specs = [s for s in AGENTS if s["org"] == "acme"]
+    else:
+        client = admin_client(read_env(CORE_ENV))
+        specs = AGENTS
     controller_id = online_controller(client)
     print("controller:", controller_id)
-    for spec in AGENTS:
+    for spec in specs:
         agent_id = ensure_agent(client, spec, controller_id)
         place_in_inside_room(client, spec, agent_id)
     return 0

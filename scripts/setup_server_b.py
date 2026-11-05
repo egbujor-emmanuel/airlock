@@ -59,7 +59,10 @@ def connect_telegram(client: httpx.Client) -> None:
         "channel_creation_enabled": False,
         "set_as_default": True,
     })
-    print("server B telegram:", "connected" if resp.is_success else f"FAILED {resp.status_code} {resp.text[:300]}")
+    if resp.is_success or "already uses Telegram bot" in resp.text:
+        print("server B telegram: connected")
+    else:
+        print(f"server B telegram: FAILED {resp.status_code} {resp.text[:300]}")
 
 
 def acme_room(client: httpx.Client) -> str | None:

@@ -1,6 +1,7 @@
 # Start, stop or restart both envoys in the background.
 #   powershell -ExecutionPolicy Bypass -File scripts\envoys.ps1 restart
-param([ValidateSet("start", "stop", "restart", "status")] [string]$Action = "restart")
+param([ValidateSet("start", "stop", "restart", "status")] [string]$Action = "restart",
+      [string]$Topology = "config/topology.local.json")  # or config/topology.federated.json
 $root = Split-Path $PSScriptRoot -Parent
 $exe = Join-Path $root ".venv\Scripts\airlock-envoy.exe"
 
@@ -20,7 +21,7 @@ function Start-Envoys {
     New-Item -ItemType Directory -Force (Join-Path $root ".airlock\logs") | Out-Null
     foreach ($org in "acme", "payco") {
         $log = Join-Path $root ".airlock\logs\envoy-$org.log"
-        Start-Process -FilePath $exe -ArgumentList $org -WorkingDirectory $root -WindowStyle Hidden `
+        Start-Process -FilePath $exe -ArgumentList @($org, "--topology", $Topology) -WorkingDirectory $root -WindowStyle Hidden `
             -RedirectStandardError $log -RedirectStandardOutput "$log.out"
     }
 }
