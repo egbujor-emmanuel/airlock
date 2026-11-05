@@ -1,0 +1,26 @@
+{
+  "contract": "Airlock Mirror: live operator view of a cross-company agent boundary. Job: watch crossings happen and see each one signed and countersigned. Primary surfaces: hero (FluidGlass 3D lens over AIRLOCK, live counters, latest crossing on glass), three-locks explainer, control room (three chambers with pressure doors), ledger chain. Palette: graphite ground, Acme amber, PayCo teal, steel shared, red only for breach/decline. Motion: GSAP door + capsule per approved crossing, ScrollTrigger reveals, Lenis synced to GSAP ticker; reduced motion disables Lenis and travel.",
+  "targetViewports": ["1440x900", "390x844"],
+  "accessibility": {
+    "status": "pass",
+    "evidence": "Semantic sections with aria-labelledby on every chamber, the ledger and the locks; h1 present (visually hidden) with the wordmark as an img with aria-label; decorative doors and FluidGlass canvas aria-hidden; status and alerts use role=status/role=alert; visible focus ring via :focus-visible; reduced motion verified in the browser: Lenis inactive, chambers opacity 1 immediately, counters at final values."
+  },
+  "responsive": {
+    "status": "pass",
+    "evidence": "1440x900: three chambers side by side with doors, fixed-height scrolling panels, no horizontal page overflow (scrollWidth <= innerWidth). 390x844: hero lens scales to 120px, copy and counters wrap, scroll cue hidden to avoid overlap, chambers stack, no horizontal overflow."
+  },
+  "contentStates": {
+    "loading": { "status": "pass", "evidence": "'Connecting to the ledgers…' notice renders until the first server-sent event arrives." },
+    "empty": { "status": "pass", "evidence": "With no crossings the control room shows 'No crossings yet' and the exact command to start the scenario." },
+    "error": { "status": "pass", "evidence": "If the API never answers, 'Mirror is offline' explains how to start it and offers a Retry button; a dropped connection keeps the last state with a 'Reconnecting' pill (EventSource retries)." },
+    "partial": { "status": "pass", "evidence": "If one company's ledger is missing, a banner names it and that seal reads 'ledger not on this machine'; the rest renders." },
+    "success": { "status": "pass", "evidence": "Run 3 replay renders 13 crossings, 3 withheld, 53 verified signatures, typed query and answer as chips, every crossing 'ML-DSA-65 ✓ · countersigned ✓'." },
+    "permission": { "status": "not-applicable", "reason": "Local operator view that reads ledger files on the same machine; there is no account or access level in the Mirror itself (approval rights live in Telegram, enforced by the envoy)." }
+  },
+  "renderedEvidence": [
+    { "viewport": "1440x900", "artifact": "v2-hero-1440.png", "observation": "Logo and live status at top; FluidGlass lens idles over AIRLOCK with refraction and chromatic dispersion; tagline, counters (13/3/53/11) and latest-crossing glass card do not overlap." },
+    { "viewport": "1440x900", "artifact": "v2-room-1440.png", "observation": "Three chambers with striped pressure doors; typed query/answer render as wrapped chips; every shared crossing shows ML-DSA-65 and countersigned ticks." },
+    { "viewport": "1440x900", "artifact": "v2-locks-1440.png", "observation": "Three SpotlightCards with live figures 3 withheld, 13 approved, 13/13 countersigned." },
+    { "viewport": "390x844", "artifact": "v2-hero-390.png", "observation": "Lens scaled over AIRLOCK, copy wraps, counters in two columns, no overlap, no horizontal scroll." }
+  ]
+}

@@ -31,6 +31,20 @@ receipts: every approved crossing was countersigned by the other side
 
 Edit one character in `docs/evidence/run-3/acme.jsonl` and run it again.
 
+### Watch it in Airlock Mirror (+2 minutes, Node 24)
+
+```bash
+cd mirror && npm install && npm run build && cd ..
+uv run airlock-mirror --evidence docs/evidence/run-3   # replay the recorded run at http://127.0.0.1:8787
+uv run airlock-mirror                                  # or watch your own live run
+```
+
+![Airlock Mirror: the 3D lens over AIRLOCK, live totals and the latest crossing](docs/mirror-hero.png)
+
+The Mirror reads both companies' ledgers, re-verifies every ML-DSA-65 signature in the browser's view, and streams new crossings as they happen. When a person approves one, that company's pressure door opens and the crossing travels into the shared room. Crossings still waiting for a human glow until someone answers.
+
+![The control room: each company's private room, the shared room between them, and the pressure doors](docs/mirror-room.png)
+
 ### The full live setup (about 20 minutes)
 
 You need [Switch Console](https://github.com/sandbox-quantum/switch/releases/latest) 0.40+, Node 24, uv, Claude Code and OpenCode (`npm i -g opencode-ai`, free models, no key), a Discord server with a bot, and a Telegram bot. Commands below are for Windows PowerShell; the Python scripts run the same on macOS and Linux.

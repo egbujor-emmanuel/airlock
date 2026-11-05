@@ -15,3 +15,6 @@ demo/acme-app/.env
 demo/acme-app/logs/
 demo/payco-sdk/INTERNAL_NOTES.md
 demo/payco-sdk/merchants.local.json
+mirror/node_modules/
+mirror/dist/
+.playwright-mcp/

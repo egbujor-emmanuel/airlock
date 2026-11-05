@@ -34,3 +34,4 @@ testpaths = ["tests"]
 airlock-envoy = "airlock.envoy:main"
 airlock-bench = "airlock.bench:main"
 airlock-verify = "airlock.verify:main"
+airlock-mirror = "airlock.mirror:main"
