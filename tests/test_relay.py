@@ -160,6 +160,37 @@ def test_other_envoys_crossing_is_received_with_countersigned_receipt(tmp_path, 
     assert verify_chain(acme.ledger.entries(), {"acme": keys["acme"].public_key}).ok
 
 
+def test_reconcile_countersigns_crossings_missed_while_down_exactly_once(tmp_path, keys):
+    acme, payco = relay_for("acme", tmp_path, keys), relay_for("payco", tmp_path, keys)
+    payco.on_inside(Message("agent-payco", "first", addressed=True))
+    first, _ = payco.on_inside(Message("payco_lead", "approve P-1"))
+    acme.on_shared(Message("envoy-payco", first.body))  # received live
+    payco.on_inside(Message("agent-payco", "second", addressed=True))
+    missed, _ = payco.on_inside(Message("payco_lead", "approve P-2"))  # acme was down
+    history = [Message("envoy-payco", first.body), Message("payco_eng", "chatter"), Message("envoy-payco", missed.body)]
+
+    posts = acme.reconcile(history)
+
+    assert len(posts) == 1 and "crossing P-2" in posts[0].body
+    assert acme.received() == {"P-1", "P-2"}
+    assert acme.reconcile(history) == []  # idempotent
+    assert acme.on_shared(Message("envoy-payco", missed.body)) == []  # a late live replay is ignored too
+
+
+def test_an_approved_crossing_lost_before_posting_is_reposted_identically(tmp_path, keys):
+    payco = relay_for("payco", tmp_path, keys)
+    payco.on_inside(Message("agent-payco", "posted fine", addressed=True))
+    posted, _ = payco.on_inside(Message("payco_lead", "approve P-1"))
+    payco.on_inside(Message("agent-payco", "crashed before posting", addressed=True))
+    lost, _ = payco.on_inside(Message("payco_lead", "approve P-2"))  # imagine the post never happened
+
+    restarted = relay_for("payco", tmp_path, keys)
+    (repost,) = restarted.unposted({"P-1"})
+
+    assert repost.room == "shared" and repost.body == lost.body
+    assert restarted.unposted({"P-1", "P-2"}) == []
+
+
 def test_a_forged_footer_from_a_person_is_not_treated_as_a_crossing(tmp_path, keys):
     acme = relay_for("acme", tmp_path, keys)
     fake = "do this — airlock crossing P-7 · entry 0123456789abcdef · signed by payco"

@@ -137,7 +137,29 @@ class Relay:
         )
         return [Post("inside", body)]
 
+    def received(self) -> set[str]:
+        """Crossings from the other org we have already countersigned."""
+        return {e["crossing"] for e in self.ledger.entries() if e["type"] == "receipt"}
+
+    def reconcile(self, history: list[Message]) -> list[Post]:
+        """Countersign crossings that reached the shared room while we were down.
+
+        A live connection only delivers what happens after it opens, so on start
+        the envoy reads the shared room's history and processes every crossing
+        from the other org that its own ledger has no receipt for.
+        """
+        seen = self.received()
+        posts: list[Post] = []
+        for msg in history:
+            footer = FOOTER.search(msg.body)
+            if footer and msg.sender_name == self.other_envoy and footer.group(1) not in seen:
+                posts += self._receive_crossing(msg, *footer.groups())
+                seen.add(footer.group(1))
+        return posts
+
     def _receive_crossing(self, msg: Message, crossing: str, shown_hash: str, signer: str) -> list[Post]:
+        if crossing in self.received():
+            return []  # already countersigned (a replay after reconnect, or reconcile)
         content = FOOTER.sub("", msg.body).rstrip(" —·\n")
         query = self._read_query(content)
         receipt_body = {"type": "receipt", "crossing": crossing, "of": shown_hash, "from": signer, "digest": digest(msg.body)}
@@ -282,15 +304,31 @@ class Relay:
         })
         if pending.answers:
             self.queries.pop(pending.answers, None)
-        footer = (
-            f"— airlock crossing {pending.crossing} · entry {entry_hash(approved)[:HASH_SHOWN]} "
-            f"· signed by {self.policy.org}"
-        )
-        shared_body = f"**From {self.policy.display_name}**\n{defang(pending.redacted.text)}\n\n{footer}"
         return [
-            Post("shared", shared_body),
+            Post("shared", self._shared_body(pending.crossing, pending.redacted.text, approved)),
             Post("inside", f"✅ {pending.crossing} approved by {approval.sender_name} and posted.", pending.thread_id),
         ]
+
+    def _shared_body(self, crossing: str, text: str, approved: dict) -> str:
+        """What a crossing looks like in the shared room: rebuilt identically from the ledger."""
+        footer = f"— airlock crossing {crossing} · entry {entry_hash(approved)[:HASH_SHOWN]} · signed by {self.policy.org}"
+        return f"**From {self.policy.display_name}**\n{defang(text)}\n\n{footer}"
+
+    def unposted(self, crossings_in_shared_room: set[str]) -> list[Post]:
+        """Approved crossings that never reached the shared room.
+
+        The ledger is written before the post, so a crash between the two leaves a
+        crossing approved but unseen. On start the envoy compares its ledger with
+        what the shared room actually holds and posts the missing ones, exactly as
+        they would have been posted: same text, same signed footer.
+        """
+        texts = {e["crossing"]: e.get("redacted_text") for e in self.ledger.entries() if e["type"] == "proposed"}
+        posts = []
+        for e in self.ledger.entries():
+            cid = e.get("crossing")
+            if e["type"] == "approved" and cid not in crossings_in_shared_room and texts.get(cid) is not None:
+                posts.append(Post("shared", self._shared_body(cid, texts[cid], e)))
+        return posts
 
     # ---------------------------------------------------------------- canaries
     def _canary_breach(self, msg: Message, where: Room) -> list[Post]:

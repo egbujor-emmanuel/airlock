@@ -22,7 +22,7 @@ from typing import IO
 from airlock.ledger.chain import Ledger
 from airlock.ledger.signing import load_or_create
 from airlock.policy import load_policy
-from airlock.relay import Message, Post, Relay
+from airlock.relay import FOOTER, Message, Post, Relay
 from airlock.switch.connection import RoomConnection, RoomEvent
 from airlock.switch.creds import load_creds
 from airlock.switch.http import AgentHttp
@@ -30,6 +30,7 @@ from airlock.switch.http import AgentHttp
 log = logging.getLogger("airlock.envoy")
 ROOT = Path.cwd()
 STATE = ROOT / ".airlock"
+RECONCILE_WINDOW = 100  # recent shared-room messages checked for missed crossings on start
 
 
 def _connection_path(org: str, room: str) -> Path:
@@ -75,6 +76,13 @@ def hold_single_instance_lock(org: str) -> IO[bytes]:
     return handle
 
 
+def _creds(name: str):
+    creds = load_creds(STATE / "agents" / f"{name}.json")
+    if creds is None:
+        raise SystemExit(f"{name} isn't registered yet (no credentials in .airlock/agents)")
+    return creds
+
+
 def to_message(event: RoomEvent) -> Message:
     p = event.payload
     return Message(
@@ -91,10 +99,13 @@ class Envoy:
         o = topology["orgs"][org]
         self.org = org
         self.rooms = {"inside": o["inside_room"], "shared": topology["shared_room"]}
-        self.creds = load_creds(STATE / "agents" / f"{o['envoy']}.json")
-        if self.creds is None:
-            raise SystemExit(f"{o['envoy']} isn't registered yet (no credentials in .airlock/agents)")
-        self.http = AgentHttp(self.creds)
+        # Two-server mode: the inside room can live on the org's own Switch server,
+        # where the envoy is registered separately. Each room gets its own credentials.
+        self.creds = {
+            "shared": _creds(o["envoy"]),
+            "inside": _creds(o.get("inside_envoy", o["envoy"])),
+        }
+        self.http = {room: AgentHttp(c) for room, c in self.creds.items()}
         policy = load_policy(ROOT / "policies" / f"{org}.yaml", canaries)
         other = topology["orgs"][policy.other_org]["envoy"]
         ledger = Ledger(STATE / "ledger" / f"{org}.jsonl", load_or_create(STATE / "keys" / f"{org}.json", org))
@@ -102,7 +113,7 @@ class Envoy:
         self._lock = hold_single_instance_lock(org)
         self.conns = {
             name: RoomConnection(
-                self.creds, room, connection_id(org, name),
+                self.creds[name], room, connection_id(org, name),
                 on_rotate=lambda new_id, name=name: save_connection_id(org, name, new_id),
             )
             for name, room in self.rooms.items()
@@ -118,7 +129,7 @@ class Envoy:
         args = {"body": post.body}
         if post.thread_id:
             args["thread_id"] = post.thread_id
-        await self.http.op("post_message", connection_id=conn.connection_id, **args)
+        await self.http[post.room].op("post_message", connection_id=conn.connection_id, **args)
 
     async def _handle(self, name: str, event: RoomEvent) -> None:
         if event.kind != "message":
@@ -130,14 +141,37 @@ class Envoy:
             await self._post(post)
             log.info("  → posted to %s room (%d chars)", post.room, len(post.body))
 
+    async def _reconcile(self) -> None:
+        """Catch up on crossings posted to the shared room while this envoy was down."""
+        ctx = await self.http["shared"].op(
+            "read_context", connection_id=self.conns["shared"].connection_id, limit=RECONCILE_WINDOW
+        )
+        entries = [m for t in ctx.get("threads", []) for m in [t.get("root", t), *t.get("replies", [])]]
+        history = [
+            Message(sender_name=str(m.get("sender_name", "")), body=str(m.get("body", "")),
+                    message_id=str(m.get("id", "")))
+            for m in sorted(entries, key=lambda m: m.get("timestamp", 0))
+        ]
+        in_room = {m.group(1) for msg in history if (m := FOOTER.search(msg.body))}
+        ours = self.relay.unposted(in_room)
+        theirs = self.relay.reconcile(history)
+        for post in ours + theirs:
+            await self._post(post)
+        if ours:
+            log.info("re-posted %d approved crossing(s) that never reached the shared room", len(ours))
+        if theirs:
+            log.info("countersigned %d crossing(s) posted while this envoy was down", len(theirs))
+
     async def run(self) -> None:
         runners = [asyncio.create_task(c.run(), name=f"conn-{n}") for n, c in self.conns.items()]
         for name, conn in self.conns.items():
             await conn.wait_ready()
-            await self.http.op("connect_to_room", connection_id=conn.connection_id,
-                               room_id=self.rooms[name], include_general_instructions=False)
+            await self.http[name].op("connect_to_room", connection_id=conn.connection_id,
+                                     room_id=self.rooms[name], include_general_instructions=False)
+        await self._reconcile()
         pumps = [asyncio.create_task(self._pump(n), name=f"pump-{n}") for n in self.conns]
-        log.info("%s online in %s", self.creds.name, ", ".join(self.rooms))
+        servers = {name: c.base_url for name, c in self.creds.items()}
+        log.info("%s online: inside on %s, shared on %s", self.creds["shared"].name, servers["inside"], servers["shared"])
         try:
             while True:
                 name, event = await self.queue.get()
@@ -148,7 +182,8 @@ class Envoy:
         finally:
             for t in runners + pumps:
                 t.cancel()
-            await self.http.aclose()
+            for http in self.http.values():
+                await http.aclose()
 
 
 def main() -> None:
