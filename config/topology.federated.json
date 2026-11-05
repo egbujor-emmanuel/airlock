@@ -1,6 +1,6 @@
 {
   "base_url": "http://127.0.0.1:61913",
-  "shared_room": "306832df-bf03-4d79-a165-6a2ffa53455d",
+  "shared_room": "762f1066-1cd3-4f8d-b3ba-d1ac3a102661",
   "orgs": {
     "acme": {
       "envoy": "envoy-acme",

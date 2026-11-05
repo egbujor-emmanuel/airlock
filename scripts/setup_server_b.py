@@ -45,7 +45,7 @@ def admin_b(env: dict[str, str]) -> httpx.Client:
 def connect_telegram(client: httpx.Client) -> None:
     rows = client.get("/collaborations").json()
     bridges = rows if isinstance(rows, list) else rows.get("bridges", rows.get("items", []))
-    if any(b.get("type") == "telegram" for b in bridges):
+    if any(b.get("bridge_type", b.get("type")) == "telegram" for b in bridges):
         print("server B telegram: already connected")
         return
     chat = read_env(ROOT / ".secrets" / "chat2.env")

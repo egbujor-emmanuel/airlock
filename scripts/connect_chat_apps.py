@@ -40,7 +40,7 @@ def admin_client(core: dict[str, str]) -> httpx.Client:
 def connect(client: httpx.Client, bridge_type: str, name: str, config: dict[str, object]) -> None:
     existing = client.get("/collaborations").json()
     rows = existing if isinstance(existing, list) else existing.get("bridges", existing.get("items", []))
-    if any(b.get("type") == bridge_type for b in rows):
+    if any(b.get("bridge_type", b.get("type")) == bridge_type for b in rows):
         print(f"{bridge_type}: already connected")
         return
     resp = client.post(

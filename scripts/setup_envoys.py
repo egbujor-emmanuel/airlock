@@ -29,7 +29,7 @@ from airlock.switch.creds import load_creds  # noqa: E402
 from airlock.switch.http import AgentHttp, ensure_registered  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-SHARED_NAME = "acme-x-payco"
+SHARED_NAME = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--shared-name=")), "acme-x-payco")
 ORGS = {
     "acme": {"display": "Acme Envoy", "inside_name": "Acme Inside"},
     "payco": {"display": "PayCo Envoy", "inside_name": "PayCo Inside"},
@@ -57,8 +57,8 @@ def bridge_id(client, bridge_type: str) -> str:
     rows = client.get("/collaborations").json()
     bridges = rows if isinstance(rows, list) else rows.get("bridges", rows.get("items", []))
     for b in bridges:
-        if b.get("type") == bridge_type:
-            return b["id"]
+        if b.get("bridge_type", b.get("type")) == bridge_type:
+            return b.get("bridge_id") or b["id"]
     raise SystemExit(f"No {bridge_type} connection yet: run scripts/connect_chat_apps.py first")
 
 
