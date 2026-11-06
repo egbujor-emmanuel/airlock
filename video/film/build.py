@@ -70,6 +70,10 @@ def main() -> None:
             .replace("__AUDIO__", "\n      ".join(audio)))
     for i, s in enumerate(scenes, start=1):
         html = html.replace(f"__S{i}__", f'data-start="{s["t"]}" data-duration="{s["d"]}"')
+    def video_slot(m: re.Match) -> str:
+        i, off, dur = int(m.group(1)), float(m.group(2)), float(m.group(3))
+        return f'data-start="{scenes[i - 1]["t"] + off:.3f}" data-duration="{dur:.3f}"'
+    html = re.sub(r"__VS(\d+):([\d.]+):([\d.]+)__", video_slot, html)
     (HERE / "index.html").write_text(html, encoding="utf-8")
     print(f"index.html: {len(scenes)} scenes, {len(captions)} captions, {t:.1f}s")
 
