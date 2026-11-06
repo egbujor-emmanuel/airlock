@@ -39,6 +39,12 @@
       .cap span { background: rgba(243,239,231,0.92); color: var(--paper-ink); font-size: 31px; font-weight: 600; padding: 12px 28px;
                   border-radius: 999px; max-width: 1400px; text-align: center; }
 
+      .vwin video { display: block; width: 100%; }
+      .vwin { opacity: 0; z-index: 5; }
+      .cwin { left: 210px; top: 120px; width: 1500px; }
+      #s8win { left: 160px; top: 90px; width: 1600px; }
+      .xwin.v { width: 1000px; height: auto; left: 140px; top: 70px; }
+
       /* 1 hook */
       #s1 .log { position: absolute; right: 60px; top: 80px; width: 860px; font-size: 21px; line-height: 2.05; color: var(--dim); }
       #s1 .log .r { color: #e06a6a; }
@@ -213,37 +219,12 @@
       </section>
 
       <section id="s5" class="scene clip" data-start="38.036" data-duration="11.488" data-track-index="0" data-track-kind="graphics">
-        <div class="win xwin" id="s5win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Telegram · PayCo Inside</div>
-          <div class="body">
-            <div class="bubble panel" id="s5q"><div class="who">opencode-payco → envoy-payco</div>
-              <div class="mono" style="font-size:24px;color:var(--teal);margin-bottom:8px">ask Q-P-8</div>
-              <div class="field"><b>deliveries_total</b> <i>int</i></div>
-              <div class="field"><b>deliveries_rejected</b> <i>int</i><div class="ring" id="rg1" style="width:390px"></div></div>
-              <div class="field"><b>verifier_errors</b> <i>enum list</i><div class="ring" id="rg2" style="width:430px"></div></div>
-              <div class="field"><b>regions</b> <i>us-east|ap-south|eu-west|other</i><div class="ring" id="rg3" style="width:620px"></div></div>
-              <div class="field"><b>rejected_t_digits</b> <i>10|13|other</i><div class="ring" id="rg4" style="width:470px"></div></div>
-              <div class="field"><b>rejections_started_after_4_2_0</b> <i>bool</i></div></div>
-            <div class="bubble lock" id="s5c"><div class="who">envoy-payco</div>🔒 Crossing <b>P-8</b> · typed query · waiting for a PayCo human</div>
-            <div class="bubble me" id="s5a"><div class="who" style="color:#cfe3f5">DeFi_Maroh</div>approve P-8</div>
-            <div class="mono ok" id="s5ok" style="font-size:24px">✓ approved · ML-DSA-65 signed · entry a577a3eb16ad184e</div>
-          </div></div>
         <div class="side"><div class="kicker" style="color: var(--teal)" id="s5k">PayCo asks</div>
           <div class="h2" id="s5t" style="margin-top:14px">A <em>typed</em> question.</div>
           <p id="s5p">Every field is a number, a yes/no or a fixed choice. Nothing else is accepted.</p></div>
       </section>
 
       <section id="s6" class="scene clip" data-start="49.523" data-duration="11.725" data-track-index="0" data-track-kind="graphics">
-        <div class="win xwin" id="s6win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Telegram · Acme Private · Switch server B</div>
-          <div class="body">
-            <div class="bubble panel" id="s6q"><div class="who">claude-acme → envoy-acme · computed from Acme's private logs</div>
-              <div class="mono" style="font-size:24px;color:var(--amber);margin-bottom:12px">answer Q-P-8</div>
-              <div><span class="chip">deliveries_total 91</span><span class="chip">deliveries_rejected 45</span></div>
-              <div><span class="chip">timestamp_outside_tolerance_zone</span><span class="chip">malformed_signature_header</span></div>
-              <div><span class="chip">eu-west</span><span class="chip">other</span><span class="chip">t digits 13</span><span class="chip">after 4.2.0 true</span></div></div>
-            <div class="bubble" id="s6x" style="border:2px solid var(--red);color:#ffb3b3">⛔ Not sent: a typed answer can't carry free text, so no email, host or key fits.</div>
-            <div class="bubble me" id="s6a"><div class="who" style="color:#cfe3f5">DeFi_Maroh</div>approve A-6</div>
-            <div class="mono ok" id="s6ok" style="font-size:24px">✓ approved · ML-DSA-65 signed · entry ca5c3cadcba25d5d</div>
-          </div></div>
         <div class="side"><div class="kicker" style="color: var(--amber)" id="s6k">Acme answers</div>
           <div class="h2" id="s6t" style="margin-top:14px">Values cross. <em>Data</em> doesn't.</div>
           <p id="s6p">Claude Code reads the logs inside Acme. Only the typed values reach PayCo.</p></div>
@@ -265,8 +246,6 @@
       </section>
 
       <section id="s8" class="scene clip" data-start="74.752" data-duration="13.347" data-track-index="0" data-track-kind="graphics">
-        <div class="win" id="s8win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Airlock Mirror · control room · run 3</div>
-          <img id="s8img" src="assets/mirror-room.png" alt="" /></div>
         <div id="s8b" style="position:absolute;inset:0;opacity:0">
           <div class="chain">
             <div class="entry" id="c1" style="border-left-color: var(--teal)"><div class="k">PayCo ledger</div><div class="c">P-8 · query</div>
@@ -298,6 +277,14 @@
         <div class="pos" id="s9pos"><div class="h1">Not another <s>chat-bot bridge</s>.<br />A <em>boundary.</em></div></div>
       </section>
 
+      <div class="win vwin cwin" id="s4win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Switch Console · agents and rooms on the local Switch server</div>
+          <video id="v4" class="clip" src="assets/v-console.mp4" muted playsinline data-start="26.245" data-duration="5.700" data-track-index="3"></video></div>
+      <div class="win xwin vwin v" id="s5win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Telegram · PayCo Inside (real run, Nov 4)</div>
+          <video id="v5" class="clip" src="assets/v-payco.mp4" muted playsinline data-start="38.136" data-duration="11.350" data-track-index="3"></video></div>
+      <div class="win xwin vwin v" id="s6win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Telegram · Acme Inside (real run, Nov 4)</div>
+          <video id="v6" class="clip" src="assets/v-acme.mp4" muted playsinline data-start="49.623" data-duration="11.600" data-track-index="3"></video></div>
+      <div class="win vwin v" id="s8win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Discord · #acme-x-payco · the shared room (real run, Nov 4)</div>
+          <video id="v8" class="clip" src="assets/v-discord.mp4" muted playsinline data-start="74.852" data-duration="7.300" data-track-index="3"></video></div>
       <div id="cap1-0" class="clip cap" data-start="0.300" data-duration="4.029" data-track-index="10"><span>Forty-five of ninety-one webhooks from PayCo, rejected.</span></div>
       <div id="cap1-1" class="clip cap" data-start="4.369" data-duration="2.327" data-track-index="10"><span>Acme's checkout is losing sales,</span></div>
       <div id="cap1-2" class="clip cap" data-start="6.736" data-duration="1.661" data-track-index="10"><span>and nobody can say why.</span></div>
@@ -373,31 +360,26 @@
       tl.fromTo("#s3img", { scale: 1 }, { scale: 1.08, duration: S[2].d * 0.5, ease: "none" }, at(2, 0.5));
 
       // 4 setup
-      enter("#s4k", S[3].t + 0.1); enter("#s4t", S[3].t + 0.2);
-      enter("#r1", at(3, 0.04)); enter("#sv1", at(3, 0.2));
-      enter("#r3", at(3, 0.12));
-      enter("#r2", at(3, 0.42)); enter("#sv2", at(3, 0.42));
-      tl.fromTo(["#e1", "#e2"], { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.5, stagger: 0.15, ease: "back.out(2)" }, at(3, 0.56));
-      tl.fromTo(["#e1l", "#e2l"], { opacity: 0 }, { opacity: 1, duration: 0.4 }, at(3, 0.6));
-      tl.to(["#a1", "#a2"], { backgroundColor: "rgba(255,93,93,0.18)", color: "#ffb3b3", duration: 0.4 }, at(3, 0.78));
-      enter("#nv", at(3, 0.8));
+      enter("#s4k", at(3, 0.5)); enter("#s4t", at(3, 0.5));
+      tl.fromTo("#s4win", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, S[3].t);
+      tl.to("#s4win", { opacity: 0, y: -30, duration: 0.4, ease: "power2.in" }, S[3].t + 5.7);
+      enter("#r1", at(3, 0.52)); enter("#sv1", at(3, 0.56));
+      enter("#r3", at(3, 0.55));
+      enter("#r2", at(3, 0.62)); enter("#sv2", at(3, 0.62));
+      tl.fromTo(["#e1", "#e2"], { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.5, stagger: 0.15, ease: "back.out(2)" }, at(3, 0.7));
+      tl.fromTo(["#e1l", "#e2l"], { opacity: 0 }, { opacity: 1, duration: 0.4 }, at(3, 0.72));
+      tl.to(["#a1", "#a2"], { backgroundColor: "rgba(255,93,93,0.18)", color: "#ffb3b3", duration: 0.4 }, at(3, 0.84));
+      enter("#nv", at(3, 0.86));
 
       // 5 ask
-      tl.fromTo("#s5win", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, S[4].t + 0.05);
+      tl.fromTo("#s5win", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, S[4].t + 0.05);
+      tl.to("#s5win", { opacity: 0, duration: 0.3, ease: "power2.in" }, S[4].t + S[4].d - 0.3);
       enter("#s5k", S[4].t + 0.2); enter("#s5t", S[4].t + 0.3); enter("#s5p", at(4, 0.2));
-      enter("#s5q", S[4].t + 0.35);
-      ["#rg1", "#rg2", "#rg3", "#rg4"].forEach((r, k) => {
-        tl.fromTo(r, { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.25, ease: "power3.out" }, at(4, 0.24 + k * 0.1));
-        tl.to(r, { opacity: 0, duration: 0.25 }, at(4, 0.34 + k * 0.1));
-      });
-      enter("#s5c", at(4, 0.62)); enter("#s5a", at(4, 0.78)); enter("#s5ok", at(4, 0.86));
 
       // 6 answer
-      tl.fromTo("#s6win", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, S[5].t + 0.05);
+      tl.fromTo("#s6win", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, S[5].t + 0.05);
+      tl.to("#s6win", { opacity: 0, duration: 0.3, ease: "power2.in" }, S[5].t + S[5].d - 0.3);
       enter("#s6k", S[5].t + 0.2); enter("#s6t", S[5].t + 0.3); enter("#s6p", at(5, 0.2));
-      enter("#s6q", S[5].t + 0.35);
-      tl.fromTo("#s6q .chip", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.07, ease: "power3.out" }, S[5].t + 0.7);
-      enter("#s6x", at(5, 0.42)); enter("#s6a", at(5, 0.8)); enter("#s6ok", at(5, 0.88));
 
       // 7 fix
       tl.fromTo(["#st1", "#st2", "#st3"], { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.55, ease: "power3.out" }, S[6].t + 0.25);
@@ -407,13 +389,12 @@
 
       // 8 proof
       tl.fromTo("#s8win", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, S[7].t + 0.05);
-      tl.fromTo("#s8img", { scale: 1 }, { scale: 1.9, duration: S[7].d * 0.36, ease: "expo.inOut" }, S[7].t + 0.5);
-      tl.to("#s8win", { opacity: 0, duration: 0.35, ease: "power2.in" }, at(7, 0.4));
-      tl.to("#s8b", { opacity: 1, duration: 0.3 }, at(7, 0.42));
-      tl.fromTo(["#c1", "#c2", "#c3"], { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.25, ease: "power3.out" }, at(7, 0.43));
-      tl.fromTo(["#v1", "#v2", "#v3"], { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.3 }, at(7, 0.55));
-      tl.to("#s8b", { opacity: 0, duration: 0.35, ease: "power2.in" }, at(7, 0.76));
-      tl.fromTo("#s8bench", { opacity: 0, scale: 0.92 }, { opacity: 1, scale: 1, duration: 0.6, ease: "power3.out" }, at(7, 0.79));
+      tl.to("#s8win", { opacity: 0, duration: 0.35, ease: "power2.in" }, S[7].t + 7.4);
+      tl.to("#s8b", { opacity: 1, duration: 0.3 }, S[7].t + 7.6);
+      tl.fromTo(["#c1", "#c2", "#c3"], { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.45, stagger: 0.15, ease: "power3.out" }, S[7].t + 7.6);
+      tl.fromTo(["#v1", "#v2", "#v3"], { opacity: 0 }, { opacity: 1, duration: 0.25, stagger: 0.2 }, S[7].t + 8.1);
+      tl.to("#s8b", { opacity: 0, duration: 0.35, ease: "power2.in" }, at(7, 0.8));
+      tl.fromTo("#s8bench", { opacity: 0, scale: 0.92 }, { opacity: 1, scale: 1, duration: 0.5, ease: "power3.out" }, at(7, 0.83));
 
       // 9 claim
       tl.fromTo("#s9pos .h1", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, S[8].t + 0.1);
