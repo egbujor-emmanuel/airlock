@@ -4,7 +4,7 @@
 
 Built on [Switch](https://github.com/sandbox-quantum/switch) for the Flip the Switch hackathon (Track 1: Best Business Workflow).
 
-> 🎬 **Demo video (3 min):** _link added at submission_
+> 🎬 **Demo video (98 s):** [airlock-demo.mp4](https://github.com/egbujor-emmanuel/airlock/releases/download/submission-v1.0/airlock-demo.mp4) (source: [`video/film`](video/film), built with HyperFrames from the run-3 evidence)
 > 📜 **Proof of a real run:** [shared-room transcript](docs/evidence/run-3/shared-room.md) · [signed ledgers](docs/evidence/run-3/) · [the fix the agents shipped](docs/evidence/run-3/payco-fix.diff)
 
 ---
@@ -60,6 +60,8 @@ You need [Switch Console](https://github.com/sandbox-quantum/switch/releases/lat
 | 7 | `uv run python scripts/setup_inside_agents.py` | Creates Claude Code for Acme and OpenCode for PayCo, each in its own private room only |
 | 8 | `cd demo/acme-app; npm install; cd ../..` then `powershell -File scripts/up.ps1` | Starts both envoys and Acme's checkout app |
 | 9 | `uv run python scripts/start_scenario.py` | Acme reports the problem. Approve crossings in Telegram with `approve <id>` |
+
+**Two-server mode (Acme on its own Switch server).** `uv run python scripts/server_b.py start` starts a second, independent switch-core with its own database, secrets and admin. `uv run python scripts/setup_server_b.py` connects a second Telegram bot to it and moves Acme's private room, Acme's Claude Code agent and the inside half of Acme's envoy there. `uv run python scripts/setup_inside_agents.py --server-b`, then `powershell -File scripts/envoys.ps1 restart -Topology config/topology.federated.json`. Before a recorded run, `uv run python scripts/refresh_agents.py --server-b --fresh` starts both agents on brand-new sessions.
 
 `uv run python scripts/selftest.py` drives one full crossing with stand-in agents and checks every room and ledger. `scripts/reset_demo.ps1` puts the bug back for another run.
 
@@ -137,6 +139,8 @@ Airlock is built out of Switch. Take Switch away and there's nothing left: no ro
 | **Managed agents** (two vendors) | Claude Code for Acme, OpenCode on a free model for PayCo, run by Switch Console |
 | **Gateway API** | `connect_chat_apps.py` and `setup_envoys.py` build the whole topology reproducibly |
 | **Room history** | Agents and the selftest read what really landed in each room |
+| **Two independent servers** | Acme's private room and agent live on Acme's own switch-core; one envoy holds a connection to each server, so nothing of Acme's is stored on the shared server unless it crossed |
+| **Agent controller** | A standalone controller enrolled on server B runs Acme's Claude Code; Console's runs PayCo's OpenCode |
 
 ## The guarantees, and what enforces each
 

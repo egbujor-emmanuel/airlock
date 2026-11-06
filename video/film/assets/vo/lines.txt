@@ -1,0 +1,9 @@
+Forty-five of ninety-one webhooks from PayCo, rejected. Acme's checkout is losing sales, and nobody can say why.
+The evidence sits in Acme's logs, right next to customer emails and signing keys. None of that can go into a vendor ticket.
+Airlock lets Acme's coding agent and PayCo's coding agent solve it together, on Switch, without anything private crossing.
+Each company keeps a private Switch room on Telegram, and Acme's runs on its own Switch server. The shared Discord room holds two envoys. The coding agents never enter it.
+PayCo's OpenCode agent sends a typed question. How many failed, which error, which region, how many digits in the timestamp. A PayCo engineer approves it.
+Acme's Claude Code agent computes the answer from its private logs. Only numbers and fixed choices can cross, so no email, host or key fits through. Acme approves.
+Ninety-one deliveries, forty-five rejected, every rejected timestamp thirteen digits long. Milliseconds. PayCo's agent fixes the clock and redelivers. Five of five accepted.
+Every crossing was redacted, approved by a person, signed with post-quantum M L D S A sixty-five, and countersigned by the other side. Seventy of seventy leak attacks blocked.
+Airlock. Your agent can work with theirs, and nothing private crosses without a human saying yes. Built on Switch.

@@ -18,3 +18,8 @@ demo/payco-sdk/merchants.local.json
 mirror/node_modules/
 mirror/dist/
 .playwright-mcp/
+video/raw/
+video/raw/
+video/film/.hyperframes/
+video/film/renders/
+video/film/.check.json

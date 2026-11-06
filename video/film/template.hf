@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Grotesk"; src: url("assets/fonts/space-grotesk-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Grotesk"; src: url("assets/fonts/space-grotesk-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Mono"; src: url("assets/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Mono"; src: url("assets/fonts/jetbrains-mono-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+      :root {
+        --g: #0e1013; --panel: #181c22; --panel2: #1e232b; --line: #262c35; --line2: #3a4350;
+        --ink: #e8e6e1; --dim: #8b919a; --amber: #f0a43a; --teal: #35c2b4; --green: #7bd389; --red: #ff5d5d;
+        --paper: #f3efe7; --paper-ink: #1b1d21; --amber-ink: #14110c;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--g); }
+      #root { position: relative; width: 1920px; height: 1080px; font-family: "Grotesk", sans-serif; color: var(--ink); }
+      .scene { position: absolute; inset: 0; overflow: hidden; }
+      .mono { font-family: "Mono", monospace; }
+      em { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; }
+      .kicker { font-family: "Mono", monospace; font-size: 24px; letter-spacing: 0.14em; text-transform: uppercase; }
+      .h1 { font-size: 92px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.02; }
+      .h2 { font-size: 64px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.08; }
+      .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+      .win { position: absolute; background: var(--panel); border: 1px solid var(--line2); border-radius: 10px; overflow: hidden;
+             box-shadow: 0 24px 48px rgba(0,0,0,0.45); }
+      .win .bar { height: 50px; display: flex; align-items: center; gap: 10px; padding: 0 18px; background: #12151a;
+                  border-bottom: 1px solid var(--line); font-family: "Mono", monospace; font-size: 24px; color: var(--dim); }
+      .win .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--line2); }
+      .redact { display: inline-block; height: 0.9em; vertical-align: -0.08em; background: #3a4350; border-radius: 3px; }
+      .chip { display: inline-block; font-family: "Mono", monospace; font-size: 27px; padding: 4px 12px; border: 1px solid var(--line2);
+              border-radius: 6px; background: var(--g); color: var(--ink); margin: 0 8px 8px 0; }
+      .bubble { border-radius: 10px; padding: 18px 22px; font-size: 27px; line-height: 1.35; }
+      .who { font-family: "Mono", monospace; font-size: 23px; color: var(--dim); margin-bottom: 8px; }
+      .ok { color: var(--green); }
+      .cap { position: absolute; left: 0; right: 0; bottom: 70px; display: flex; justify-content: center; z-index: 50; }
+      .cap span { background: rgba(243,239,231,0.92); color: var(--paper-ink); font-size: 31px; font-weight: 600; padding: 12px 28px;
+                  border-radius: 999px; max-width: 1400px; text-align: center; }
+
+      /* 1 hook */
+      #s1 .log { position: absolute; right: 60px; top: 80px; width: 860px; font-size: 21px; line-height: 2.05; color: var(--dim); }
+      #s1 .log .r { color: #e06a6a; }
+      #s1 .left { position: absolute; left: 130px; top: 250px; width: 820px; }
+      #s1 .num { font-size: 280px; font-weight: 600; letter-spacing: -0.04em; line-height: 0.9; color: var(--red); }
+      #s1 .num small { font-size: 120px; color: var(--dim); letter-spacing: -0.02em; }
+      #s1 .fade { position: absolute; right: 0; top: 0; bottom: 0; width: 1100px;
+                  background: linear-gradient(90deg, var(--g) 0%, rgba(14,16,19,0.55) 30%, rgba(14,16,19,0.2) 100%); }
+
+      /* 2 tension */
+      #s2 { background: var(--paper); color: var(--paper-ink); }
+      #s2 .title { position: absolute; left: 130px; top: 110px; }
+      #s2 .logcard { position: absolute; left: 130px; top: 330px; width: 960px; padding: 30px 34px; background: #16191e; color: var(--ink);
+                     border-radius: 10px; font-size: 23px; line-height: 2.1; }
+      #s2 .logcard .bar2 { display: inline-block; height: 26px; vertical-align: -6px; background: var(--red); border-radius: 3px; transform-origin: left center; }
+      #s2 .ticket { position: absolute; right: 130px; top: 330px; width: 600px; padding: 34px; border: 2px dashed #b9b2a6; border-radius: 12px; }
+      #s2 .ticket .t1 { font-size: 26px; color: #6f6a62; font-family: "Mono", monospace; }
+      #s2 .ticket .t2 { font-size: 40px; font-weight: 600; margin: 18px 0 26px; }
+      #s2 .stamp { display: inline-block; border: 4px solid #c8382f; color: #c8382f; font-weight: 600; font-size: 34px; padding: 10px 22px;
+                   border-radius: 8px; transform: rotate(-4deg); }
+
+      /* 3 reveal */
+      #s3 { background: var(--amber); color: var(--amber-ink); }
+      #s3 .lockup { position: absolute; left: 0; right: 0; top: 270px; text-align: center; }
+      #s3 .lockup img { width: 170px; height: 170px; }
+      #s3 .word { font-size: 210px; font-weight: 600; letter-spacing: 0.08em; line-height: 1; margin-top: 18px; }
+      #s3 .line { font-size: 44px; margin-top: 26px; }
+      #s3 .win { left: 210px; top: 1080px; width: 1500px; height: 890px; }
+      #s3 .win img { width: 1500px; display: block; transform-origin: 30% 70%; }
+
+      /* 4 setup */
+      #s4 .title { position: absolute; left: 130px; top: 90px; }
+      #s4 .room { position: absolute; top: 330px; width: 500px; height: 420px; padding: 28px; border-radius: 12px; background: var(--panel);
+                  border: 2px solid var(--line2); }
+      #s4 .room .app { font-family: "Mono", monospace; font-size: 23px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.12em; }
+      #s4 .room .nm { font-size: 40px; font-weight: 600; margin: 8px 0 22px; }
+      #s4 .room .mem { font-size: 27px; line-height: 1.75; }
+      #s4 .room .mem .agent { padding: 2px 10px; border-radius: 6px; margin-left: -10px; }
+      #s4 .acme { left: 130px; border-color: var(--amber); }
+      #s4 .shared { left: 710px; }
+      #s4 .payco { left: 1290px; border-color: var(--teal); }
+      #s4 .env { position: absolute; top: 500px; width: 76px; height: 76px; }
+      #s4 .envlab { position: absolute; top: 588px; width: 140px; text-align: center; font-family: "Mono", monospace; font-size: 24px; color: var(--dim); }
+      #s4 .server { position: absolute; top: 775px; height: 56px; border: 1px solid var(--line2); border-radius: 8px; display: flex; align-items: center;
+                    justify-content: center; font-family: "Mono", monospace; font-size: 22px; color: var(--dim); }
+      #s4 .never { position: absolute; left: 710px; top: 690px; width: 500px; text-align: center; font-family: "Mono", monospace; font-size: 22px; color: var(--red); }
+
+      /* 5, 6 the exchange */
+      .xwin { left: 110px; top: 110px; width: 1120px; height: 830px; }
+      .xwin .body { padding: 26px 30px; display: flex; flex-direction: column; gap: 18px; }
+      .side { position: absolute; left: 1300px; top: 250px; width: 520px; }
+      .side .h2 { font-size: 58px; }
+      .side p { font-size: 30px; color: var(--dim); margin-top: 24px; line-height: 1.4; }
+      .field { font-family: "Mono", monospace; font-size: 27px; line-height: 1.75; position: relative; }
+      .field b { font-weight: 400; color: var(--ink); }
+      .field i { font-style: normal; color: var(--dim); }
+      .ring { position: absolute; left: -10px; top: -2px; height: 42px; border: 3px solid var(--teal); border-radius: 8px; }
+      .ring.amber { border-color: var(--amber); }
+      .lock { border: 1px solid var(--line2); background: var(--panel2); }
+      .me { align-self: flex-end; background: #2b5d8a; color: #fff; }
+
+      /* 7 fix */
+      #s7 .stats { position: absolute; left: 130px; top: 170px; display: flex; gap: 90px; }
+      #s7 .stat .v { font-size: 190px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+      #s7 .stat .l { font-family: "Mono", monospace; font-size: 26px; color: var(--dim); margin-top: 6px; }
+      #s7 .ms { position: absolute; left: 130px; top: 470px; font-size: 54px; font-weight: 600; }
+      #s7 .diff { position: absolute; left: 130px; top: 590px; width: 1100px; padding: 26px 30px; font-size: 22px; line-height: 1.7; }
+      #s7 .diff .m { color: #ff8a8a; background: rgba(255,93,93,0.08); }
+      #s7 .diff .p { color: var(--green); background: rgba(123,211,137,0.08); }
+      #s7 .acc { position: absolute; left: 1320px; top: 590px; width: 470px; padding: 30px; border: 2px solid var(--green); border-radius: 12px; }
+      #s7 .acc .v { font-size: 120px; font-weight: 600; color: var(--green); line-height: 1; }
+      #s7 .acc .l { font-size: 28px; margin-top: 12px; }
+
+      /* 8 proof */
+      #s8 .win { left: 160px; top: 90px; width: 1600px; height: 900px; }
+      #s8 .win img { width: 1600px; display: block; transform-origin: 47% 88%; }
+      #s8 .chain { position: absolute; left: 130px; top: 200px; display: flex; gap: 70px; }
+      #s8 .entry { width: 500px; padding: 28px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line2); border-left-width: 5px; }
+      #s8 .entry .k { font-family: "Mono", monospace; font-size: 22px; color: var(--dim); }
+      #s8 .entry .c { font-size: 44px; font-weight: 600; margin: 8px 0 14px; }
+      #s8 .entry .h { font-family: "Mono", monospace; font-size: 25px; }
+      #s8 .entry .s { font-family: "Mono", monospace; font-size: 22px; margin-top: 14px; line-height: 1.6; }
+      #s8 .link { position: absolute; top: 330px; width: 70px; height: 3px; background: var(--line2); transform-origin: left center; }
+      #s8 .term { position: absolute; left: 130px; top: 560px; width: 1660px; padding: 28px 32px; font-size: 25px; line-height: 1.8; }
+      #s8 .bench { position: absolute; left: 0; right: 0; top: 330px; text-align: center; }
+      #s8 .bench .v { font-size: 230px; font-weight: 600; letter-spacing: -0.04em; color: var(--green); line-height: 1; }
+      #s8 .bench .l { font-size: 40px; margin-top: 20px; }
+      #s8 .bench .l2 { font-family: "Mono", monospace; font-size: 26px; color: var(--dim); margin-top: 16px; }
+
+      /* 9 claim */
+      #s9 .pos { position: absolute; inset: 0; background: var(--amber); color: var(--amber-ink); display: flex; align-items: center; justify-content: center; }
+      #s9 .pos .h1 { font-size: 104px; text-align: center; }
+      #s9 .pos s { text-decoration-thickness: 8px; opacity: 0.55; }
+      #s9 .end { position: absolute; inset: 0; background: var(--g); text-align: center; padding-top: 230px; }
+      #s9 .end img { width: 150px; height: 150px; }
+      #s9 .end .word { font-size: 150px; font-weight: 600; letter-spacing: 0.08em; margin-top: 14px; line-height: 1; }
+      #s9 .end .tag { font-size: 40px; margin-top: 26px; }
+      #s9 .end .url { font-family: "Mono", monospace; font-size: 30px; color: var(--amber); margin-top: 46px; }
+      #s9 .end .foot { font-family: "Mono", monospace; font-size: 24px; color: var(--dim); margin-top: 18px; letter-spacing: 0.08em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="__TOTAL__" data-width="1920" data-height="1080">
+
+      <section id="s1" class="scene clip" __S1__ data-track-index="0" data-track-kind="graphics">
+        <div class="log mono" id="s1log" data-layout-allow-overlap>
+          <div id="l1">21:11:58 INFO  accepted  region=us-east  t=1793740318  evt=evt_4f2a…</div>
+          <div id="l2" class="r">21:12:03 WARN  rejected  region=eu-west  t=1793740323117  timestamp_outside_tolerance_zone</div>
+          <div id="l3">21:12:07 INFO  accepted  region=ap-south t=1793740327  customer=<span class="redact" style="width:210px"></span></div>
+          <div id="l4" class="r">21:12:11 WARN  rejected  region=eu-west  t=1793740331402  malformed_signature_header</div>
+          <div id="l5" class="r">21:12:14 WARN  rejected  region=eu-west  t=1793740334871  timestamp_outside_tolerance_zone</div>
+          <div id="l6">21:12:19 INFO  accepted  region=us-east  t=1793740339  customer=<span class="redact" style="width:180px"></span></div>
+          <div id="l7" class="r">21:12:22 WARN  rejected  region=eu-west  t=1793740342255  timestamp_outside_tolerance_zone</div>
+          <div id="l8" class="r">21:12:26 WARN  rejected  region=eu-west  t=1793740346930  timestamp_outside_tolerance_zone</div>
+          <div id="l9">21:12:31 INFO  accepted  region=ap-south t=1793740351  customer=<span class="redact" style="width:240px"></span></div>
+          <div id="l10" class="r">21:12:35 WARN  rejected  region=eu-west  t=1793740355618  malformed_signature_header</div>
+          <div id="l11" class="r">21:12:38 WARN  rejected  region=eu-west  t=1793740358044  timestamp_outside_tolerance_zone</div>
+          <div id="l12">21:12:42 INFO  accepted  region=us-east  t=1793740362  customer=<span class="redact" style="width:200px"></span></div>
+          <div id="l13" class="r">21:12:47 WARN  rejected  region=eu-west  t=1793740367391  timestamp_outside_tolerance_zone</div>
+          <div id="l14" class="r">21:12:51 WARN  rejected  region=eu-west  t=1793740371776  timestamp_outside_tolerance_zone</div>
+        </div>
+        <div class="fade" data-layout-allow-overlap></div>
+        <div class="left">
+          <div class="kicker" id="s1k" style="color: var(--amber)">Acme · checkout · after PayCo 4.2.0</div>
+          <div class="num" id="s1num"><span id="s1n">0</span><small> / 91</small></div>
+          <div class="h2" id="s1t">PayCo webhooks <em style="color: var(--red)">rejected.</em></div>
+        </div>
+      </section>
+
+      <section id="s2" class="scene clip" __S2__ data-track-index="0" data-track-kind="graphics">
+        <div class="title"><div class="kicker" style="color:#8a7f6e" id="s2k">Why nobody can just share the logs</div>
+          <div class="h1" id="s2t" style="margin-top:18px">The proof is <em>private.</em></div></div>
+        <div class="logcard mono" id="s2log">
+          <div id="m1">WARN rejected region=eu-west reason=timestamp_outside_tolerance_zone</div>
+          <div id="m2">customer_email=<span class="bar2" style="width:330px"></span></div>
+          <div id="m3">signing_secret=<span class="bar2" style="width:420px"></span></div>
+          <div id="m4">WARN rejected region=eu-west reason=malformed_signature_header</div>
+          <div id="m5">customer_email=<span class="bar2" style="width:290px"></span></div>
+          <div id="m6">internal_host=<span class="bar2" style="width:360px"></span></div>
+        </div>
+        <div class="ticket" id="s2tk">
+          <div class="t1">Support ticket → PayCo</div>
+          <div class="t2">Paste your logs here</div>
+          <div class="stamp" id="s2st">Can't send: customer data + keys</div>
+        </div>
+      </section>
+
+      <section id="s3" class="scene clip" __S3__ data-track-index="0" data-track-kind="graphics">
+        <div class="lockup" id="s3lock">
+          <img id="s3mark" src="assets/mark.svg" alt="" />
+          <div class="word" id="s3w">AIRLOCK</div>
+          <div class="line" id="s3l">Agents from two companies, one boundary, on <b>Switch</b>.</div>
+        </div>
+        <div class="win" id="s3win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Airlock Mirror · run 3 · ledgers verified</div>
+          <img id="s3img" src="assets/mirror-hero.png" alt="" /></div>
+      </section>
+
+      <section id="s4" class="scene clip" __S4__ data-track-index="0" data-track-kind="graphics">
+        <div class="title"><div class="kicker" style="color: var(--dim)" id="s4k">The setup</div>
+          <div class="h2" id="s4t" style="margin-top:14px">Switch puts agents in <em style="color: var(--amber)">rooms.</em></div></div>
+        <div class="room acme" id="r1"><div class="app">Telegram · private</div><div class="nm" style="color: var(--amber)">Acme Private</div>
+          <div class="mem">Acme engineers<br /><span class="agent" id="a1">Claude Code agent</span><br />envoy-acme</div></div>
+        <div class="room shared" id="r2"><div class="app">Discord · shared</div><div class="nm">acme-x-payco</div>
+          <div class="mem">people from both sides<br />envoy-acme<br />envoy-payco</div></div>
+        <div class="room payco" id="r3"><div class="app">Telegram · private</div><div class="nm" style="color: var(--teal)">PayCo Inside</div>
+          <div class="mem">PayCo engineers<br /><span class="agent" id="a2">OpenCode agent</span><br />envoy-payco</div></div>
+        <img class="env" id="e1" src="assets/mark.svg" alt="" style="left: 667px" /><div class="envlab" id="e1l" style="left: 635px">envoy</div>
+        <img class="env" id="e2" src="assets/mark.svg" alt="" style="left: 1247px" /><div class="envlab" id="e2l" style="left: 1215px">envoy</div>
+        <div class="server" id="sv1" style="left: 130px; width: 500px; border-color: var(--amber); color: var(--amber)">Switch server B · Acme's own</div>
+        <div class="server" id="sv2" style="left: 710px; width: 1080px">Switch server A</div>
+        <div class="never" id="nv">✕ no coding agent is a member here</div>
+      </section>
+
+      <section id="s5" class="scene clip" __S5__ data-track-index="0" data-track-kind="graphics">
+        <div class="win xwin" id="s5win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Telegram · PayCo Inside</div>
+          <div class="body">
+            <div class="bubble panel" id="s5q"><div class="who">opencode-payco → envoy-payco</div>
+              <div class="mono" style="font-size:24px;color:var(--teal);margin-bottom:8px">ask Q-P-8</div>
+              <div class="field"><b>deliveries_total</b> <i>int</i></div>
+              <div class="field"><b>deliveries_rejected</b> <i>int</i><div class="ring" id="rg1" style="width:390px"></div></div>
+              <div class="field"><b>verifier_errors</b> <i>enum list</i><div class="ring" id="rg2" style="width:430px"></div></div>
+              <div class="field"><b>regions</b> <i>us-east|ap-south|eu-west|other</i><div class="ring" id="rg3" style="width:620px"></div></div>
+              <div class="field"><b>rejected_t_digits</b> <i>10|13|other</i><div class="ring" id="rg4" style="width:470px"></div></div>
+              <div class="field"><b>rejections_started_after_4_2_0</b> <i>bool</i></div></div>
+            <div class="bubble lock" id="s5c"><div class="who">envoy-payco</div>🔒 Crossing <b>P-8</b> · typed query · waiting for a PayCo human</div>
+            <div class="bubble me" id="s5a"><div class="who" style="color:#cfe3f5">DeFi_Maroh</div>approve P-8</div>
+            <div class="mono ok" id="s5ok" style="font-size:24px">✓ approved · ML-DSA-65 signed · entry a577a3eb16ad184e</div>
+          </div></div>
+        <div class="side"><div class="kicker" style="color: var(--teal)" id="s5k">PayCo asks</div>
+          <div class="h2" id="s5t" style="margin-top:14px">A <em>typed</em> question.</div>
+          <p id="s5p">Every field is a number, a yes/no or a fixed choice. Nothing else is accepted.</p></div>
+      </section>
+
+      <section id="s6" class="scene clip" __S6__ data-track-index="0" data-track-kind="graphics">
+        <div class="win xwin" id="s6win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Telegram · Acme Private · Switch server B</div>
+          <div class="body">
+            <div class="bubble panel" id="s6q"><div class="who">claude-acme → envoy-acme · computed from Acme's private logs</div>
+              <div class="mono" style="font-size:24px;color:var(--amber);margin-bottom:12px">answer Q-P-8</div>
+              <div><span class="chip">deliveries_total 91</span><span class="chip">deliveries_rejected 45</span></div>
+              <div><span class="chip">timestamp_outside_tolerance_zone</span><span class="chip">malformed_signature_header</span></div>
+              <div><span class="chip">eu-west</span><span class="chip">other</span><span class="chip">t digits 13</span><span class="chip">after 4.2.0 true</span></div></div>
+            <div class="bubble" id="s6x" style="border:2px solid var(--red);color:#ffb3b3">⛔ Not sent: a typed answer can't carry free text, so no email, host or key fits.</div>
+            <div class="bubble me" id="s6a"><div class="who" style="color:#cfe3f5">DeFi_Maroh</div>approve A-6</div>
+            <div class="mono ok" id="s6ok" style="font-size:24px">✓ approved · ML-DSA-65 signed · entry ca5c3cadcba25d5d</div>
+          </div></div>
+        <div class="side"><div class="kicker" style="color: var(--amber)" id="s6k">Acme answers</div>
+          <div class="h2" id="s6t" style="margin-top:14px">Values cross. <em>Data</em> doesn't.</div>
+          <p id="s6p">Claude Code reads the logs inside Acme. Only the typed values reach PayCo.</p></div>
+      </section>
+
+      <section id="s7" class="scene clip" __S7__ data-track-index="0" data-track-kind="graphics">
+        <div class="stats">
+          <div class="stat" id="st1"><div class="v">91</div><div class="l">deliveries</div></div>
+          <div class="stat" id="st2"><div class="v" style="color: var(--red)">45</div><div class="l">rejected</div></div>
+          <div class="stat" id="st3"><div class="v">13</div><div class="l">digits in every rejected t=</div></div>
+        </div>
+        <div class="ms" id="s7ms">13 digits = <em style="color: var(--red)">milliseconds</em>, where t= is whole seconds.</div>
+        <div class="diff panel mono" id="s7diff">
+          <div style="color: var(--dim)">payco-sdk/sender/hrclock.js · fixed by PayCo's OpenCode agent</div>
+          <div class="m">-  return Math.round(performance.timeOrigin + performance.now());</div>
+          <div class="p">+  return Math.floor((performance.timeOrigin + performance.now()) / 1000);</div>
+        </div>
+        <div class="acc" id="s7acc"><div class="v">5 / 5</div><div class="l">failed events redelivered<br /><b class="ok">accepted by Acme</b></div></div>
+      </section>
+
+      <section id="s8" class="scene clip" __S8__ data-track-index="0" data-track-kind="graphics">
+        <div class="win" id="s8win"><div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;Airlock Mirror · control room · run 3</div>
+          <img id="s8img" src="assets/mirror-room.png" alt="" /></div>
+        <div id="s8b" style="position:absolute;inset:0;opacity:0">
+          <div class="chain">
+            <div class="entry" id="c1" style="border-left-color: var(--teal)"><div class="k">PayCo ledger</div><div class="c">P-8 · query</div>
+              <div class="h">a577a3eb16ad184e</div><div class="s ok">ML-DSA-65 ✓<br />countersigned by Acme ✓</div></div>
+            <div class="entry" id="c2" style="border-left-color: var(--amber)"><div class="k">Acme ledger</div><div class="c">A-6 · answer</div>
+              <div class="h">ca5c3cadcba25d5d</div><div class="s ok">ML-DSA-65 ✓<br />countersigned by PayCo ✓</div></div>
+            <div class="entry" id="c3" style="border-left-color: var(--teal)"><div class="k">PayCo ledger</div><div class="c">P-9 · fix</div>
+              <div class="h">7bb3e57b199de36e</div><div class="s ok">ML-DSA-65 ✓<br />countersigned by Acme ✓</div></div>
+          </div>
+          <div class="term panel mono" id="s8t">
+            <div style="color: var(--dim)">$ airlock-verify docs/evidence/run-3</div>
+            <div id="v1">acme: 28 entries, 6 crossings approved, hash chain and <span class="ok">ML-DSA-65 signatures valid</span></div>
+            <div id="v2">payco: 25 entries, 7 crossings approved, hash chain and <span class="ok">ML-DSA-65 signatures valid</span></div>
+            <div id="v3">receipts: <span class="ok">every approved crossing was countersigned by the other side</span></div>
+          </div>
+        </div>
+        <div class="bench" id="s8bench" style="opacity:0"><div class="v">70 / 70</div><div class="l">leak attacks blocked by the envoy's scanner</div>
+          <div class="l2">0 false positives on 32 benign messages</div></div>
+      </section>
+
+      <section id="s9" class="scene clip" __S9__ data-track-index="0" data-track-kind="graphics">
+        <div class="end" id="s9end">
+          <img id="s9mark" src="assets/mark.svg" alt="" />
+          <div class="word" id="s9w">AIRLOCK</div>
+          <div class="tag" id="s9tag">Your agent works with theirs. Nothing private crosses without a <em style="color: var(--amber)">yes.</em></div>
+          <div class="url" id="s9url">github.com/egbujor-emmanuel/airlock</div>
+          <div class="foot" id="s9foot">FLIP THE SWITCH 2026 · BUILT ON SWITCH</div>
+        </div>
+        <div class="pos" id="s9pos"><div class="h1">Not another <s>chat-bot bridge</s>.<br />A <em>boundary.</em></div></div>
+      </section>
+
+      __CAPTIONS__
+      __AUDIO__
+    </div>
+    <script>
+      const S = __SCENES_JSON__;
+      const tl = gsap.timeline({ paused: true });
+      const at = (i, f) => S[i].t + S[i].d * f;
+      const IN = { opacity: 0, y: 40 };
+      const enter = (sel, t, extra) => tl.fromTo(sel, IN, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", ...extra }, t);
+
+      // 1 hook
+      tl.fromTo("#s1log > div", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.12, ease: "power3.out" }, S[0].t + 0.1);
+      tl.fromTo("#s1log", { y: 0 }, { y: -140, duration: S[0].d, ease: "none" }, S[0].t);
+      const n1 = { v: 0 };
+      tl.to(n1, { v: 45, duration: 1.6, ease: "power2.out", onUpdate: () => { document.getElementById("s1n").textContent = Math.round(n1.v); } }, S[0].t + 0.45);
+      
+
+      // 2 tension
+      enter("#s2k", S[1].t + 0.15); enter("#s2t", S[1].t + 0.3);
+      tl.fromTo("#s2log", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, at(1, 0.08));
+      tl.fromTo("#s2log .bar2", { scaleX: 0 }, { scaleX: 1, duration: 0.25, stagger: 0.32, ease: "power4.out" }, at(1, 0.3));
+      tl.fromTo("#s2tk", { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, at(1, 0.55));
+      tl.fromTo("#s2st", { opacity: 0, scale: 1.6 }, { opacity: 1, scale: 1, duration: 0.35, ease: "back.out(2)" }, at(1, 0.72));
+
+      // 3 reveal
+      tl.fromTo("#s3mark", { opacity: 0, scale: 0.6, rotation: -30 }, { opacity: 1, scale: 1, rotation: 0, duration: 0.8, ease: "expo.out" }, S[2].t + 0.1);
+      tl.fromTo("#s3w", { opacity: 0, scale: 1.25 }, { opacity: 1, scale: 1, duration: 0.9, ease: "expo.out" }, S[2].t + 0.25);
+      enter("#s3l", S[2].t + 0.6);
+      tl.to("#s3lock", { y: -140, opacity: 0, duration: 0.6, ease: "power2.in" }, at(2, 0.5));
+      tl.to("#s3win", { y: -985, duration: 0.9, ease: "expo.inOut" }, at(2, 0.48));
+      tl.fromTo("#s3img", { scale: 1 }, { scale: 1.08, duration: S[2].d * 0.5, ease: "none" }, at(2, 0.5));
+
+      // 4 setup
+      enter("#s4k", S[3].t + 0.1); enter("#s4t", S[3].t + 0.2);
+      enter("#r1", at(3, 0.04)); enter("#sv1", at(3, 0.2));
+      enter("#r3", at(3, 0.12));
+      enter("#r2", at(3, 0.42)); enter("#sv2", at(3, 0.42));
+      tl.fromTo(["#e1", "#e2"], { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.5, stagger: 0.15, ease: "back.out(2)" }, at(3, 0.56));
+      tl.fromTo(["#e1l", "#e2l"], { opacity: 0 }, { opacity: 1, duration: 0.4 }, at(3, 0.6));
+      tl.to(["#a1", "#a2"], { backgroundColor: "rgba(255,93,93,0.18)", color: "#ffb3b3", duration: 0.4 }, at(3, 0.78));
+      enter("#nv", at(3, 0.8));
+
+      // 5 ask
+      tl.fromTo("#s5win", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, S[4].t + 0.05);
+      enter("#s5k", S[4].t + 0.2); enter("#s5t", S[4].t + 0.3); enter("#s5p", at(4, 0.2));
+      enter("#s5q", S[4].t + 0.35);
+      ["#rg1", "#rg2", "#rg3", "#rg4"].forEach((r, k) => {
+        tl.fromTo(r, { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.25, ease: "power3.out" }, at(4, 0.24 + k * 0.1));
+        tl.to(r, { opacity: 0, duration: 0.25 }, at(4, 0.34 + k * 0.1));
+      });
+      enter("#s5c", at(4, 0.62)); enter("#s5a", at(4, 0.78)); enter("#s5ok", at(4, 0.86));
+
+      // 6 answer
+      tl.fromTo("#s6win", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.7, ease: "expo.out" }, S[5].t + 0.05);
+      enter("#s6k", S[5].t + 0.2); enter("#s6t", S[5].t + 0.3); enter("#s6p", at(5, 0.2));
+      enter("#s6q", S[5].t + 0.35);
+      tl.fromTo("#s6q .chip", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.07, ease: "power3.out" }, S[5].t + 0.7);
+      enter("#s6x", at(5, 0.42)); enter("#s6a", at(5, 0.8)); enter("#s6ok", at(5, 0.88));
+
+      // 7 fix
+      tl.fromTo(["#st1", "#st2", "#st3"], { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.55, ease: "power3.out" }, S[6].t + 0.25);
+      enter("#s7ms", at(6, 0.33));
+      tl.fromTo("#s7diff", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, at(6, 0.5));
+      tl.fromTo("#s7acc", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.6)" }, at(6, 0.78));
+
+      // 8 proof
+      tl.fromTo("#s8win", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" }, S[7].t + 0.05);
+      tl.fromTo("#s8img", { scale: 1 }, { scale: 1.9, duration: S[7].d * 0.36, ease: "expo.inOut" }, S[7].t + 0.5);
+      tl.to("#s8win", { opacity: 0, duration: 0.35, ease: "power2.in" }, at(7, 0.4));
+      tl.to("#s8b", { opacity: 1, duration: 0.3 }, at(7, 0.42));
+      tl.fromTo(["#c1", "#c2", "#c3"], { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.25, ease: "power3.out" }, at(7, 0.43));
+      tl.fromTo(["#v1", "#v2", "#v3"], { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.3 }, at(7, 0.55));
+      tl.to("#s8b", { opacity: 0, duration: 0.35, ease: "power2.in" }, at(7, 0.76));
+      tl.fromTo("#s8bench", { opacity: 0, scale: 0.92 }, { opacity: 1, scale: 1, duration: 0.6, ease: "power3.out" }, at(7, 0.79));
+
+      // 9 claim
+      tl.fromTo("#s9pos .h1", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, S[8].t + 0.1);
+      tl.to("#s9pos", { yPercent: -100, duration: 0.8, ease: "expo.inOut" }, at(8, 0.3));
+      tl.fromTo("#s9mark", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.7, ease: "expo.out" }, at(8, 0.36));
+      enter("#s9w", at(8, 0.4)); enter("#s9tag", at(8, 0.46)); enter("#s9url", at(8, 0.56)); enter("#s9foot", at(8, 0.6));
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

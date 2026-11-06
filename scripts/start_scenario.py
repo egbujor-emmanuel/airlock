@@ -24,7 +24,7 @@ REPORT = (
 
 
 async def main() -> None:
-    topology = json.loads((ROOT / "config/topology.local.json").read_text(encoding="utf-8"))
+    topology = json.loads((ROOT / "config/topology.federated.json").read_text(encoding="utf-8"))
     oncall = AgentHttp(load_creds(ROOT / ".airlock/agents/sim-acme-oncall.json"))
     await oncall.send_message(topology["shared_room"], REPORT)
     await oncall.aclose()
